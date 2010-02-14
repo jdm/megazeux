@@ -157,24 +157,13 @@ UPDATER_LIBSPEC void host_set_callbacks(struct host *h,
  void (*send_cb)(long offset), void (*recv_cb)(long offset),
  bool (*cancel_cb)(void));
 
-#ifdef NETWORK_DEADCODE
-
-/**
- * Some socket operations "fail" for non-fatal reasons. If using non-blocking
- * sockets, they may fail with EAGAIN, EINTR, or in some other
- * platform-specific way, if there was no data available at that time.
- *
- * @return Whether the last socket error was fatal, or not
- */
-bool host_last_error_fatal(void);
-
 /**
  * Sets a socket blocking mode on the given host.
  *
  * @param h        Host to alter block mode on
  * @param blocking `true' if the socket should block, `false' otherwise
  */
-void host_blocking(struct host *h, bool blocking);
+UPDATER_LIBSPEC void host_blocking(struct host *h, bool blocking);
 
 /**
  * Accepts a connection from a host processed by \ref host_bind and
@@ -186,7 +175,7 @@ void host_blocking(struct host *h, bool blocking);
  *
  * @return Connected client connection, or NULL if a failure occurred
  */
-struct host *host_accept(struct host *s);
+UPDATER_LIBSPEC struct host *host_accept(struct host *s);
 
 /**
  * Binds a host `h' to the specified host and port.
@@ -196,7 +185,7 @@ struct host *host_accept(struct host *s);
  *
  * @return Whether the bind was possible and successful, or not
  */
-bool host_bind(struct host *h, const char *hostname, int port);
+UPDATER_LIBSPEC bool host_bind(struct host *h, const char *hostname, int port);
 
 /**
  * Prepares a socket processed with @ref host_bind to listen for
@@ -206,7 +195,7 @@ bool host_bind(struct host *h, const char *hostname, int port);
  *
  * @return Whether it was possible to listen with this host, or not
  */
-bool host_listen(struct host *h);
+UPDATER_LIBSPEC bool host_listen(struct host *h);
 
 /**
  * Receive a buffer on a host via raw socket access.
@@ -218,7 +207,7 @@ bool host_listen(struct host *h);
  * @return `true' if the buffer was received, `false' if there was a
  *         communication error.
  */
-bool host_recv_raw(struct host *h, char *buffer,
+UPDATER_LIBSPEC bool host_recv_raw(struct host *h, char *buffer,
  unsigned int len);
 
 /**
@@ -231,7 +220,7 @@ bool host_recv_raw(struct host *h, char *buffer,
  * @return `true' if the buffer was sent, `false' if there was a
  *         communication error.
  */
-bool host_send_raw(struct host *h, const char *buffer,
+UPDATER_LIBSPEC bool host_send_raw(struct host *h, const char *buffer,
  unsigned int len);
 
 /**
@@ -243,7 +232,18 @@ bool host_send_raw(struct host *h, const char *buffer,
  * @return <0 if there was a failure, 0 if there was no data, and the
  *         >0 if there was activity on the socket.
  */
-int host_poll_raw(struct host *h, unsigned int timeout);
+UPDATER_LIBSPEC int host_poll_raw(struct host *h, unsigned int timeout);
+
+#ifdef NETWORK_DEADCODE
+
+/**
+ * Some socket operations "fail" for non-fatal reasons. If using non-blocking
+ * sockets, they may fail with EAGAIN, EINTR, or in some other
+ * platform-specific way, if there was no data available at that time.
+ *
+ * @return Whether the last socket error was fatal, or not
+ */
+bool host_last_error_fatal(void);
 
 // FIXME: Document
 bool host_recvfrom_raw(struct host *h, char *buffer,

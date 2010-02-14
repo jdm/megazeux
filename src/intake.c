@@ -185,6 +185,14 @@ int intake(struct world *mzx_world, char *string, int max_len,
       write_number(curr_len + 1, 79, 36, 0, 3, 0, 10);
     }
 
+#ifdef CONFIG_DEBUGGER
+    if(mzx_world->debugging)
+    {
+      //update_screen();
+      return IKEY_UNKNOWN;
+    }
+#endif
+
     in_macro = 0;
 
     // Get key

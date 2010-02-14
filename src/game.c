@@ -52,6 +52,10 @@
 #include "fsafeopen.h"
 #include "extmem.h"
 #include "util.h"
+#ifdef CONFIG_DEBUGGER
+#include "debugger_host.h"
+#include "debugger/ui.h"
+#endif
 
 #define MESG_TIMEOUT 160
 
@@ -930,6 +934,34 @@ static int update(struct world *mzx_world, int game, int *fadein)
     // Turn off mouse
     m_hide();
   }
+
+#ifdef CONFIG_DEBUGGER
+  if(mzx_world->debugging)
+    if(!debugger_run(mzx_world))
+    {
+      debugger_end(mzx_world);
+      mzx_world->debugging = NOT_DEBUGGING;
+    }
+
+  if(mzx_world->debugging == STOPPED || mzx_world->debugging == STEPPING)
+  {
+    if(mzx_world->debugging == STEPPING)
+    {
+      struct robot *watch = mzx_world->debug_watch.watch;
+      int i;
+      for(i = 0; i < mzx_world->current_board->num_robots; i++)
+        if(mzx_world->current_board->robot_list[i] == watch)
+        {
+          run_robot(mzx_world, i, watch->xpos, watch->ypos);
+          break;
+        }
+    }
+    if(pal_update)
+      update_palette();
+    update_screen();
+    return 0;
+  }
+#endif
 
   // Fade mod
   if(volume_inc)
@@ -1920,8 +1952,33 @@ __editor_maybe_static void play_game(struct world *mzx_world)
         // Toggle debug mode
         case IKEY_F6:
         {
-          if(edit_world && editing)
-            debug_mode = !debug_mode;
+          if(!edit_world || !mzx_world->editing)
+            break;
+
+#if defined(CONFIG_DEBUGGER)
+          if(get_ctrl_status(keycode_internal))
+          {
+            if(mzx_world->debugging)
+              mzx_world->debugging = NOT_DEBUGGING;
+            else mzx_world->debugging = STOPPED;
+
+            mzx_world->debug_watch.watch = NULL;
+            if(mzx_world->debugging)
+            {
+              if(!watch_robot(mzx_world))
+                mzx_world->debugging = NOT_DEBUGGING;
+              else if(!debugger_start())
+              {
+                error("Error starting debugger process.", 0x01, 0x08, 0x00);
+                mzx_world->debugging = NOT_DEBUGGING;
+              }
+            }
+            else debugger_end(mzx_world);
+          }
+          else
+#endif
+            debug_mode ^= 1;
+
           break;
         }
 
@@ -2130,6 +2187,11 @@ __editor_maybe_static void play_game(struct world *mzx_world)
       }
     }
   } while(key != IKEY_ESCAPE);
+
+#ifdef CONFIG_DEBUGGER
+  if(mzx_world->debugging)
+    debugger_end(mzx_world);
+#endif
 
   pop_context();
   vquick_fadeout();

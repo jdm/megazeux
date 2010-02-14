@@ -1612,6 +1612,13 @@ __editor_maybe_static void default_global_data(struct world *mzx_world)
   mzx_world->output_file = NULL;
 
   mzx_world->target_where = TARGET_NONE;
+
+#ifdef CONFIG_DEBUGGER
+  mzx_world->debugging = false;
+  mzx_world->debug_watch.watch = NULL;
+  mzx_world->debug_watch.breakpoints.target = NULL;
+  mzx_world->debug_watch.breakpoints.next = NULL;
+#endif
 }
 
 bool reload_world(struct world *mzx_world, const char *file, int *faded)

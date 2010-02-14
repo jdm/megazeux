@@ -87,6 +87,7 @@ RELEASE="false"
 OPT_SIZE="false"
 EDITOR="true"
 MZXRUN="true"
+MZXDBG="true"
 HELPSYS="true"
 UTILS="true"
 X11="true"
@@ -170,6 +171,9 @@ while [ "$1" != "" ]; do
 
 	[ "$1" = "--disable-mzxrun" ] && MZXRUN="false"
 	[ "$1" = "--enable-mzxrun" ]  && MZXRUN="true"
+
+	[ "$1" = "--disable-debugger" ] && MZXDBG="false"
+	[ "$1" = "--enable-debugger" ] && MZXDBG="true"
 
 	[ "$1" = "--disable-helpsys" ] && HELPSYS="false"
 	[ "$1" = "--enable-helpsys" ]  && HELPSYS="true"
@@ -270,8 +274,8 @@ if [ "$PLATFORM" = "win32"   -o "$PLATFORM" = "win64" \
   -o "$PLATFORM" = "mingw32" -o "$PLATFORM" = "mingw64" ]; then
 	[ "$PLATFORM" = "win32" -o "$PLATFORM" = "mingw32" ] && ARCHNAME=x86
 	[ "$PLATFORM" = "win64" -o "$PLATFORM" = "mingw64" ] && ARCHNAME=x64
-	[ "$PLATFORM" = "mingw32" ] && MINGWBASE=i586-mingw32msvc-
-	[ "$PLATFORM" = "mingw64" ] && MINGWBASE=x86_64-pc-mingw32-
+	[ "$PLATFORM" = "mingw32" -a "$MINGWBASE" = "" ] && MINGWBASE=i586-mingw32msvc-
+	[ "$PLATFORM" = "mingw64" -a "$MINGWBASE" = "" ] && MINGWBASE=x86_64-pc-mingw32-
 	PLATFORM="mingw"
 	echo "#define PLATFORM \"windows-$ARCHNAME\"" > src/config.h
 	echo "SUBPLATFORM=windows-$ARCHNAME"         >> platform.inc
@@ -689,6 +693,21 @@ if [ "$MZXRUN" = "true" ]; then
 	echo "BUILD_MZXRUN=1" >> platform.inc
 else
 	echo "Not building MZXRun executable."
+fi
+
+#
+# User may disable `MZXDbg' component
+#
+if [ "$MZXDBG" = "true" ]; then
+
+        #Modular components does not work with the debugger component
+        MODULAR="false"
+
+	echo "Building MZXDbg executable."
+	echo "BUILD_MZXDBG=1" >> platform.inc
+	echo "#define CONFIG_DEBUGGER" >> src/config.h
+else
+	echo "Not building MZXDbg executable."
 fi
 
 #

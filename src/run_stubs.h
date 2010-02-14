@@ -25,6 +25,7 @@
 __M_BEGIN_DECLS
 
 #include "world_struct.h"
+#include "debugger/debugger.h"
 
 #ifdef CONFIG_EDITOR
 bool is_editor(void);
@@ -47,6 +48,20 @@ bool updater_init(char *argv[]);
 #else
 static inline bool updater_init(char *argv[])
 { return true; }
+#endif
+
+#ifdef CONFIG_DEBUGGER
+//CORE_LIBSPEC bool debugger_start(void);
+//CORE_LIBSPEC void debugger_end(void);
+//CORE_LIBSPEC bool debugger_run(void);
+//CORE_LIBSPEC void watch_robot(struct world *);
+//CORE_LIBSPEC void debugger_host_send(enum message_type, param_type);
+#else
+//static inline bool debugger_start(void) { return true; }
+//static inline void debugger_end(void) {}
+//static inline bool debugger_run(void) { return true; }
+//CORE_LIBSPEC void watch_robot(struct world *) {}
+//CORE_LIBSPEC void debugger_host_send(enum message_type, param_type) {}
 #endif
 
 __M_END_DECLS

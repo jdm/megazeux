@@ -113,7 +113,7 @@ bool __update_event_status(void);
 void wait_event(void);
 Uint32 get_last_key(enum keycode_type type);
 void force_last_key(enum keycode_type type, int val);
-Uint32 get_key_status(enum keycode_type type, Uint32 index);
+CORE_LIBSPEC Uint32 get_key_status(enum keycode_type type, Uint32 index);
 void warp_mouse_x(Uint32 x);
 void warp_mouse_y(Uint32 y);
 void warp_real_mouse_x(Uint32 x);

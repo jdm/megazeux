@@ -45,6 +45,11 @@
 #include "robo_ed.h"
 #include "window.h"
 
+#ifdef CONFIG_DEBUGGER
+#include "debugger/debugger_child.h"
+#include "debugger/breakpoint.h"
+#endif
+
 #ifndef __WIN32__
 #include <limits.h>
 #endif
@@ -59,6 +64,10 @@
 
 #define MAX_MACRO_RECURSION 16
 #define MAX_MACRO_REPEAT 128
+
+#ifdef CONFIG_DEBUGGER
+bool follow_active_line = true;
+#endif
 
 #ifndef CONFIG_DEBYTECODE
 // fix cyclic dependency (could be done in several ways)
@@ -80,6 +89,12 @@ static const char key_help[(81 * 3) + 1] =
   " Alt+Home/S:Mark start  Alt+End/E:Mark end  Alt+U:Unmark   Alt+B:Block Action   \n"
   " Alt+Ins:Paste  Alt+X:Export  Alt+I:Import  Alt+V:Verify  Ctrl+I/D/C:Valid Mark \n"
 };
+#ifdef CONFIG_DEBUGGER
+static const char debugger_key_help[82] =
+{
+  "   F6:Follow  F7:Breakpoint  F8:Stop  F9:Step  F10:Continue  F11:Switch robot   \n"
+};
+#endif
 
 static const char key_help_hide[82] =
   "     Press Alt + H to view hotkey information.  Press F1 for extended help.     \n";
@@ -2786,6 +2801,47 @@ static void display_robot_line(struct robot_state *rstate,
     }
     else
     {
+      if(rstate->mzx_world->debugging)
+      {
+        //FIXME this linear search is inefficient for large programs
+        int line_number = 0;
+        int offset = 2; // FIXME Why is this 2?
+        struct robot_line *temp = rstate->base;
+        struct breakpoint *bp = &rstate->mzx_world->debug_watch.breakpoints;
+        while(temp != current_rline)
+        {
+          offset += temp->line_bytecode_length;
+          temp = temp->next;
+          line_number++;
+        }
+      
+        while(bp)
+        {
+          if(bp->pos == line_number)
+            break;
+          bp = bp->next;
+        }
+
+        if(bp)
+        {
+          //FIXME magic number 17
+          current_color = combine_colors(color_codes[17], bg_color);
+          draw_char('\x10', current_color, 0, y);
+          write_string_mask(current_rline->line_text, x,
+                            y, current_color, 0);
+          return;
+        }
+        else if(rstate->mzx_world->debug_watch.watch->cur_prog_line == offset)
+        {
+          //FIXME magic number 18
+          current_color = combine_colors(color_codes[18], bg_color);
+          draw_char('\x10', current_color, 0, y);
+          write_string_mask(current_rline->line_text, x,
+                            y, current_color, 0);
+          return;
+        }
+      }
+
       use_mask = 0;
       arg_length = 0;
 
@@ -3195,7 +3251,7 @@ static void paste_buffer(struct robot_state *rstate)
   rstate->command_buffer = rstate->command_buffer_space;
 }
 
-void robot_editor(struct world *mzx_world, struct robot *cur_robot)
+void robot_editor_ext(struct world *mzx_world, struct robot *cur_robot, int *line_y)
 {
   int key;
   int i;
@@ -3347,6 +3403,9 @@ void robot_editor(struct world *mzx_world, struct robot *cur_robot)
 
 #endif /* !CONFIG_DEBYTECODE */
 
+#ifdef CONFIG_DEBUGGER
+  if(!mzx_world->debugging)
+#endif
   save_screen();
   fill_line(80, 0, 0, top_char, top_color);
 
@@ -3361,11 +3420,28 @@ void robot_editor(struct world *mzx_world, struct robot *cur_robot)
   else
   {
     rstate.scr_hide_mode = 0;
+#ifdef CONFIG_DEBUGGER
+    if(!mzx_world->debugging)
+    {
+#endif
     write_string(key_help, 0, 22, bottom_text_color, 0);
     rstate.scr_line_start = 2;
     rstate.scr_line_middle = 11;
     rstate.scr_line_end = 20;
+#ifdef CONFIG_DEBUGGER
+    }
+    else
+    {
+      write_string(debugger_key_help, 0, 24, bottom_text_color, 0);
+      rstate.scr_line_start = 1;
+      rstate.scr_line_middle = 12;
+      rstate.scr_line_end = 23;
+    }
+#endif
   }
+
+  while(line_y && rstate.current_line < *line_y)
+    move_line_down(&rstate, 1);
 
   sprintf(max_size_buffer, "%05d", rstate.max_size);
   strcpy(rstate.command_buffer, rstate.current_rline->line_text);
@@ -3528,6 +3604,9 @@ void robot_editor(struct world *mzx_world, struct robot *cur_robot)
 
     rstate.macro_repeat_level = 0;
 
+#ifdef CONFIG_DEBUGGER
+    if(!mzx_world->debugging)
+#endif
     update_screen();
 
     if(mark_current_line)
@@ -3544,6 +3623,42 @@ void robot_editor(struct world *mzx_world, struct robot *cur_robot)
        rstate.scr_line_middle, current_line_color, 2, 0,
        &rstate.current_x, 1, rstate.active_macro);
     }
+
+#ifdef CONFIG_DEBUGGER
+    if(mzx_world->debugging)
+    {
+      const Uint32 filtered_keys[] = {
+        IKEY_LEFT, IKEY_RIGHT, IKEY_UP, IKEY_DOWN,
+        IKEY_HOME, IKEY_END, IKEY_PAGEUP, IKEY_PAGEDOWN,
+        IKEY_F6, IKEY_F7, IKEY_F8, IKEY_F9, IKEY_F10, IKEY_F11
+      };
+      unsigned int i;
+      for(i = 0; i < sizeof(filtered_keys) / sizeof(filtered_keys[0]); i++)
+      {
+        if(filtered_keys[i] == get_key(keycode_internal))
+        {
+          key = filtered_keys[i];
+          break;
+        }
+      }
+
+      if(key == IKEY_F8)
+        debugger_host_send(BREAK, -1);
+      else if(key == IKEY_F9)
+        debugger_host_send(STEP, -1);
+      else if(key == IKEY_F10)
+        debugger_host_send(CONTINUE, -1);
+      else if(key == IKEY_F11)
+        debugger_host_send(SWITCH_WATCH, -1);
+      else if(key == IKEY_F7)
+      {
+        debugger_host_send(TOGGLE_BREAKPOINT, *line_y);
+        toggle_breakpoint(mzx_world, cur_robot, *line_y);
+      }
+      else if(key == IKEY_F6)
+        follow_active_line ^= true;
+    }
+#endif
 
     mouse_press = get_mouse_press_ext();
 
@@ -3582,24 +3697,32 @@ void robot_editor(struct world *mzx_world, struct robot *cur_robot)
       case IKEY_UP:
       {
         move_and_update(&rstate, -1);
+        if(line_y)
+            *line_y = rstate.current_line;
         break;
       }
 
       case IKEY_DOWN:
       {
         move_and_update(&rstate, 1);
+        if(line_y)
+            *line_y = rstate.current_line;
         break;
       }
 
       case IKEY_PAGEUP:
       {
         move_and_update(&rstate, -9);
+        if(line_y)
+          *line_y = rstate.current_line;
         break;
       }
 
       case IKEY_PAGEDOWN:
       {
         move_and_update(&rstate, 9);
+        if(line_y)
+          *line_y = rstate.current_line;
         break;
       }
 
@@ -4246,6 +4369,12 @@ void robot_editor(struct world *mzx_world, struct robot *cur_robot)
         break;
       }
     }
+
+#ifdef CONFIG_DEBUGGER
+    if(mzx_world->debugging)
+      return;
+#endif
+
   } while(key != IKEY_ESCAPE);
 
 #ifndef CONFIG_DEBYTECODE
@@ -4256,6 +4385,11 @@ void robot_editor(struct world *mzx_world, struct robot *cur_robot)
   delete_robot_lines(cur_robot, &rstate);
 
   restore_screen();
+}
+
+void robot_editor(struct world *mzx_world, struct robot *cur_robot)
+{
+  robot_editor_ext(mzx_world, cur_robot, NULL);
 }
 
 void init_macros(struct world *mzx_world)

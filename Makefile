@@ -176,11 +176,12 @@ build/${TARGET}src:
 #
 ifneq (${SUPPRESS_BUILD},1)
 
+mzxdbg = mzxdbg${BINEXT}
 mzxrun = mzxrun${BINEXT}
 mzx = megazeux${BINEXT}
 
-mzx: ${mzxrun} ${mzx}
-mzx.debug: ${mzxrun}.debug ${mzx}.debug
+mzx: ${mzxrun} ${mzx} ${mzxdbg}
+mzx.debug: ${mzxrun}.debug ${mzx}.debug ${mzxdbg}.debug
 
 ifeq (${BUILD_MODPLUG},1)
 BUILD_GDM2S3M=1
@@ -231,6 +232,10 @@ ${build}:
 	${CP} ${mzxrun} ${build}
 	@if test -f ${mzxrun}.debug; then \
 		cp ${mzxrun}.debug ${build}; \
+	fi
+	${CP} ${mzxdbg} ${build}
+	@if test -f ${mzxdbg}.debug; then \
+		cp ${mzxdbg}.debug ${build}; \
 	fi
 ifeq (${BUILD_EDITOR},1)
 	${CP} assets/ascii.chr assets/blank.chr ${build}/assets

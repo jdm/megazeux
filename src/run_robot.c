@@ -47,6 +47,11 @@
 #include "extmem.h"
 #include "util.h"
 
+#ifdef CONFIG_DEBUGGER
+#include "debugger_host.h"
+#include "debugger/ui.h"
+#endif
+
 #define parsedir(a, b, c, d) \
  parsedir(mzx_world, a, b, c, d, _bl[0], _bl[1], _bl[2], _bl[3])
 
@@ -880,6 +885,18 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   if((id < 0) && ((src_board->robot_list[-id])->status != 2))
     return;
 
+  if(mzx_world->debugging)
+  {
+    if(mzx_world->debugging == STOPPED)
+      return;
+    else if(mzx_world->debugging == STEPPING_OTHERS
+         && mzx_world->debug_watch.watch == src_board->robot_list[id < 0 ? -id : id])
+      mzx_world->debugging = STEPPING;
+    else if(mzx_world->debugging == STEPPING
+         && mzx_world->debug_watch.watch != src_board->robot_list[id < 0 ? -id : id])
+      return;
+  }
+
   // Reset global prefixes
   mzx_world->first_prefix = 0;
   mzx_world->mid_prefix = 0;
@@ -986,6 +1003,12 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
   // Update player x/y if necessary
   find_player(mzx_world);
+
+  if(mzx_world->debugging && cur_robot == mzx_world->debug_watch.watch)
+  {
+    if(mzx_world->debug_watch.commands_executed == -1)
+      mzx_world->debug_watch.commands_executed = 0;
+  }
 
   // Main robot loop
 
@@ -5843,9 +5866,56 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
     }
     find_player(mzx_world);
 
+#ifdef CONFIG_DEBUGGER
+    if(mzx_world->debugging && cur_robot == mzx_world->debug_watch.watch)
+      debugger_send(CURRENT_LINE, cur_robot->cur_prog_line);
+
+    if(mzx_world->debugging)
+    {
+      struct breakpoint *bp;
+      for(bp = &mzx_world->debug_watch.breakpoints; bp; bp = bp->next)
+      {
+        if(bp->target != cur_robot || bp->pos != cur_robot->cur_prog_line)
+          continue;
+        
+        mzx_world->debug_watch.watch = cur_robot;
+        if(mzx_world->debugging == RUNNING
+        || mzx_world->debugging == STEPPING_OTHERS)
+        {
+          mzx_world->debugging = STOPPED;
+          watch_remote_robot(mzx_world);
+          return;
+        }
+      }
+    }
+
+    if(mzx_world->debugging == STEPPING && cur_robot == mzx_world->debug_watch.watch)
+    {
+      mzx_world->debugging = STOPPED;
+      mzx_world->debug_watch.commands_executed += lines_run + 1;
+      if(mzx_world->debug_watch.commands_executed == mzx_world->commands || done)
+      {
+        mzx_world->debug_watch.commands_executed = -1;
+        mzx_world->debugging = STEPPING_OTHERS;
+      }
+      goto after_breaker;
+    }
+#endif
+
   } while(((++lines_run) < mzx_world->commands) && (!done));
 
   breaker:
+
+  // Ended a cycle early
+  if(mzx_world->debugging && cur_robot == mzx_world->debug_watch.watch
+  && (mzx_world->debug_watch.commands_executed < mzx_world->commands || done))
+  {
+    mzx_world->debug_watch.commands_executed = -1;
+    if(mzx_world->debugging == STEPPING)
+      mzx_world->debugging = STEPPING_OTHERS;
+  }
+
+  after_breaker:
 
   cur_robot->cycle_count = 0; // In case a label changed it
   // Reset x/y (from movements)

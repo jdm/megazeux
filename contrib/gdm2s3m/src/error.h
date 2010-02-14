@@ -29,6 +29,10 @@ __G_BEGIN_DECLS
  * possible errors
  */
 
+#ifdef __WIN32__
+#undef FILE_OPEN
+#endif
+
 typedef enum {
   FILE_OPEN,
   FILE_INVALID,

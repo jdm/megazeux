@@ -127,10 +127,15 @@ struct robot_state
   struct world *mzx_world;
 };
 
-void robot_editor(struct world *mzx_world, struct robot *cur_robot);
+EDITOR_LIBSPEC void robot_editor(struct world *mzx_world, struct robot *cur_robot);
+EDITOR_LIBSPEC void robot_editor_ext(struct world *mzx_world, struct robot *cur_robot, int *line_y);
 
 EDITOR_LIBSPEC void init_macros(struct world *mzx_world);
 EDITOR_LIBSPEC void free_extended_macros(struct world *mzx_world);
+
+#ifdef CONFIG_DEBUGGER
+extern bool follow_active_line;
+#endif
 
 __M_END_DECLS
 

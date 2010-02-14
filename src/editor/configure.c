@@ -46,6 +46,8 @@ struct editor_config_entry
 // 10 items - 11
 // 11 extras - 7
 // 12 commands and command fragments - 15
+// 16 breakpoints - 12
+// 17 active line - 10
 
 static void config_ccode_colors(struct editor_config_info *conf,
  char *name, char *value, char *extended_data)
@@ -279,7 +281,7 @@ static const struct editor_config_info default_editor_options =
 
   // Robot editor options
   true,
-  { 11, 10, 10, 14, 255, 3, 11, 2, 14, 0, 15, 11, 7, 15, 1, 2, 3 },
+  { 11, 10, 10, 14, 255, 3, 11, 2, 14, 0, 15, 11, 7, 15, 1, 2, 3, 12, 10 },
   1,                            // color_coding_on
   1,                            // default_invalid_status
   0,                            // robot_editor_hide_help

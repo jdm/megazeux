@@ -13,6 +13,9 @@ LINK_CC := ${CC}
 core_src = src
 core_obj = src/.build
 
+debugger_src = src/debugger
+debugger_obj = src/debugger/.build
+
 network_src = src/network
 network_obj = src/network/.build
 
@@ -24,6 +27,8 @@ core_cxxflags = ${CXXFLAGS} -DHAVE_INTTYPES_H
 
 core_flags   += -I${core_src} -I${PREFIX}/include
 core_ldflags := -lm ${core_ldflags}
+
+mzxdbg_cflags = ${core_cflags} -DDEBUGGER_CHILD
 
 ifeq (${PLATFORM},mingw)
 core_spec := -DCORE_LIBSPEC="__declspec(dllexport)"
@@ -52,6 +57,10 @@ ${core_obj}/%.o: ${core_src}/%.c
 ${core_obj}/%.o: ${core_src}/%.cpp
 	$(if ${V},,@echo "  CXX     " $<)
 	${CXX} -MD ${core_cxxflags} ${core_flags} ${core_spec} -c $< -o $@
+
+${debugger_obj}/%.o: ${debugger_src}/%.c
+	$(if ${V},,@echo "  CC      " $<)
+	${CC} -MD ${mzxdbg_cflags} ${core_flags} ${core_spec} -c $< -o $@
 
 #
 # Lists mandatory C language sources (mangled to object names) required
@@ -226,13 +235,18 @@ endif
 ifeq (${BUILD_NETWORK},1)
 
 core_cflags += ${ZLIB_CFLAGS}
-core_ldflags := ${ZLIB_LDFLAGS} ${core_ldflags} 
+core_ldflags := ${ZLIB_LDFLAGS} ${core_ldflags}  ${network_ldflags}
 
 core_cobjs += ${network_obj}/host.o ${network_obj}/manifest.o
 core_cobjs += ${network_obj}/network.o ${network_obj}/sha256.o
 
 ifeq (${BUILD_UPDATER},1)
 mzx_objs += ${core_obj}/updater.o
+endif
+
+ifeq (${BUILD_MZXDBG},1)
+core_cobjs += ${debugger_obj}/ui.o ${core_obj}/debugger_host.o ${debugger_obj}/message.o \
+              ${debugger_obj}/breakpoint.o
 endif
 
 ifeq (${PLATFORM},amiga)
@@ -353,10 +367,57 @@ ${mzxrun}.debug:
 
 endif
 
+ifeq (${BUILD_MZXDBG},1)
+
+mzxdbg_objs := ${debugger_obj}/main.o
+mzxdbg_cflags += -DDEBUGGER_CHILD
+
+ifeq (${PLATFORM},darwin)
+mzxdbg_objs += arch/darwin/SDLMain.o
+mzxdbg_ldflags += -framework Cocoa
+endif
+
+-include ${mzxdbg_objs:.o=.d}
+
+${core_cobjs}: $(filter-out $(wildcard ${debugger_obj}), ${debugger_obj})
+${mzxdbg_objs}: $(filter-out $(wildcard ${debugger_obj}), ${debugger_obj})
+
+ifeq (${EMBED_ICONS},1)
+mzx_objs += ${icons}
+endif
+
+#ifeq (${BUILD_MODULAR},1)
+#${mzxdbg}.debug: ${core_target}.debug
+#endif
+
+${mzxdbg}: ${core_target} ${editor_target} ${mzxdbg_objs}
+	$(if ${V},,@echo "  LINK    " ${mzxdbg})
+#ifeq (${BUILD_MODULAR},1)
+#	${CC} ${mzxdbg_objs} -o ${mzxdbg} ${ARCH_EXE_LDFLAGS} ${LDFLAGS} \
+#	  ${DSORPATH} -L. -lcore -leditor \
+#	  ${mzxdbg_ldflags}
+#else
+	${LINK_CC} ${mzxdbg_objs} ${core_target} ${editor_target} \
+	  -o ${mzxdbg} ${ARCH_EXE_LDFLAGS} ${LDFLAGS} \
+	  ${editor_ldflags} ${core_ldflags} ${mzxdbg_ldflags}
+#endif
+
+#mzx_clean: debugger_clean
+
+else
+
+.PHONY: ${mzxdbg}.debug
+${mzxdbg}:
+${mzxdbg}.debug:
+
+endif
+
 mzx_clean: core_target_clean gdm2s3m_clean icons_clean libmodplug_clean
-	$(if ${V},,@echo "  RM      " ${core_obj} ${network_obj})
-	${RM} -r ${core_obj} ${network_obj}
+	$(if ${V},,@echo "  RM      " ${core_obj} ${network_obj} ${debugger_obj})
+	${RM} -r ${core_obj} ${network_obj} ${debugger_obj}
 	$(if ${V},,@echo "  RM      " ${mzxrun} ${mzxrun}.debug)
 	${RM} ${mzxrun} ${mzxrun}.debug
+	$(if ${V},,@echo "  RM      " ${mzxdbg} ${mzxdbg}.debug)
+	${RM} ${mzxdbg} ${mzxdbg}.debug
 	$(if ${V},,@echo "  RM      " ${mzx} ${mzx}.debug)
 	${RM} ${mzx} ${mzx}.debug

@@ -30,3 +30,11 @@ void load_editor_config(struct world *mzx_world, int *argc, char *argv[]) { }
 #ifdef CONFIG_UPDATER
 bool updater_init(char *argv[]) { return true; }
 #endif
+
+#ifdef CONFIG_DEBUGGER 
+/*bool debugger_start(void) { return true; }
+void debugger_end(void) {}
+bool debugger_run(void) { return true; }
+void watch_robot(struct world *mzx_world) {}*/
+//void debugger_host_send(enum message_type type, param_type param) {}
+#endif

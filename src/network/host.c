@@ -134,6 +134,9 @@ static const char *gai_strerror(int errcode)
 
 #if defined(__WIN32__) || defined(__amigaos__)
 
+#undef  FD_ISSET
+#define FD_ISSET(fd,set) socksyms.__WSAFDIsSet((SOCKET)(fd),(fd_set *)(set))
+
 // Forward declarations
 static inline struct hostent *platform_gethostbyname(const char *name);
 static inline uint16_t platform_htons(uint16_t hostshort);
@@ -768,6 +771,11 @@ static bool __recv(struct host *h, void *buffer, unsigned int len)
 
       return false;
     }
+    else if(!count) // remote socket could have closed
+    {
+      if(host_poll_raw(h, 10))
+        return false;
+    }
 
     if(h->cancel_cb && h->cancel_cb())
       return false;
@@ -1288,10 +1296,28 @@ void host_set_callbacks(struct host *h, void (*send_cb)(long offset),
   h->cancel_cb = cancel_cb;
 }
 
-#ifdef NETWORK_DEADCODE
+int host_poll_raw(struct host *h, unsigned int timeout)
+{
+  struct timeval tv;
+  fd_set mask;
+  int ret;
 
-#undef  FD_ISSET
-#define FD_ISSET(fd,set) socksyms.__WSAFDIsSet((SOCKET)(fd),(fd_set *)(set))
+  FD_ZERO(&mask);
+  FD_SET(h->fd, &mask);
+
+  tv.tv_sec  = (timeout / 1000);
+  tv.tv_usec = (timeout % 1000) * 1000;
+
+  ret = platform_select(h->fd + 1, &mask, NULL, NULL, &tv);
+  if(ret < 0)
+    return -1;
+
+  if(ret > 0)
+    if(FD_ISSET(h->fd, &mask))
+      return 1;
+
+  return 0;
+}
 
 void host_blocking(struct host *h, bool blocking)
 {
@@ -1404,6 +1430,8 @@ bool host_send_raw(struct host *h, const char *buffer, unsigned int len)
   return __send(h, buffer, len);
 }
 
+#ifdef NETWORK_DEADCODE
+
 struct buf_priv_data {
   char *buffer;
   unsigned int len;
@@ -1501,29 +1529,6 @@ bool host_sendto_raw(struct host *h, const char *buffer, unsigned int len,
   struct buf_priv_data buf_priv = { (char *)buffer, len, h, true };
   host_address_op(h, hostname, port, &buf_priv, sendto_raw_op);
   return buf_priv.ret;
-}
-
-int host_poll_raw(struct host *h, unsigned int timeout)
-{
-  struct timeval tv;
-  fd_set mask;
-  int ret;
-
-  FD_ZERO(&mask);
-  FD_SET(h->fd, &mask);
-
-  tv.tv_sec  = (timeout / 1000);
-  tv.tv_usec = (timeout % 1000) * 1000;
-
-  ret = platform_select(h->fd + 1, &mask, NULL, NULL, &tv);
-  if(ret < 0)
-    return -1;
-
-  if(ret > 0)
-    if(FD_ISSET(h->fd, &mask))
-      return 1;
-
-  return 0;
 }
 
 static int zlib_forge_gzip_header(char *buffer)

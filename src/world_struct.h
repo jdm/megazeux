@@ -36,6 +36,10 @@ __M_BEGIN_DECLS
 
 #include "sfx.h"
 
+#ifdef CONFIG_DEBUGGER
+#include "debugger/breakpoint.h"
+#endif
+
 struct world
 {
   // 0 if a world has been loaded, 1 if it hasn't
@@ -187,6 +191,23 @@ struct world
 #ifdef CONFIG_EDITOR
   struct editor_config_info editor_conf;
   bool editing;
+#endif
+
+#ifdef CONFIG_DEBUGGER
+  enum
+  {
+    NOT_DEBUGGING = 0, // No debugger running
+    STOPPED,           // All robots paused
+    STEPPING,          // Running one command for watched robot
+    STEPPING_OTHERS,   // Running full cycle for all other robots
+    RUNNING            // All robots running
+  } debugging;
+  struct
+  {
+    struct robot *watch;
+    struct breakpoint breakpoints;
+    int commands_executed;
+  } debug_watch;
 #endif
 
   // Keep this open, just once
