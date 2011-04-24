@@ -1963,7 +1963,7 @@ __editor_maybe_static void play_game(struct world *mzx_world)
             {
               if(!watch_robot(mzx_world))
                 mzx_world->debugging = NOT_DEBUGGING;
-              else if(!debugger_start())
+              else if(!debugger_start(mzx_world))
               {
                 error("Error starting debugger process.", 0x01, 0x08, 0x00);
                 mzx_world->debugging = NOT_DEBUGGING;

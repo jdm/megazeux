@@ -116,11 +116,11 @@ void debugger_send(enum message_type type, param_type param)
     warn("Tried to send message (%d,%d) to non-existent child\n", type, param);
 }
 
-bool debugger_start()
+bool debugger_start(struct world *mzx_world)
 {
   child = NULL;
 
-  if(!host_layer_init())
+  if(!host_layer_init(&mzx_world->conf))
   {
     warn("Error initializing socket layer\n");
     return false;
