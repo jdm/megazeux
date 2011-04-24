@@ -943,13 +943,13 @@ static int update(struct world *mzx_world, int game, int *fadein)
       mzx_world->debugging = NOT_DEBUGGING;
     }
 
-  if(mzx_world->debugging == STOPPED || mzx_world->debugging == STEPPING)
+  /*  if(mzx_world->debugging == STOPPED || mzx_world->debugging == STEPPING)
   {
     if(mzx_world->debugging == STEPPING)
     {
       struct robot *watch = mzx_world->debug_watch.watch;
       int i;
-      for(i = 0; i < mzx_world->current_board->num_robots; i++)
+      for(i = 0; i < mzx_world->current_board->num_robots + 1; i++)
         if(mzx_world->current_board->robot_list[i] == watch)
         {
           run_robot(mzx_world, i, watch->xpos, watch->ypos);
@@ -960,7 +960,7 @@ static int update(struct world *mzx_world, int game, int *fadein)
       update_palette();
     update_screen();
     return 0;
-  }
+    }*/
 #endif
 
   // Fade mod

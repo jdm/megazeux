@@ -885,6 +885,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   if((id < 0) && ((src_board->robot_list[-id])->status != 2))
     return;
 
+#ifdef CONFIG_DEBUGGER
   if(mzx_world->debugging)
   {
     if(mzx_world->debugging == STOPPED)
@@ -896,6 +897,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
          && mzx_world->debug_watch.watch != src_board->robot_list[id < 0 ? -id : id])
       return;
   }
+#endif
 
   // Reset global prefixes
   mzx_world->first_prefix = 0;
@@ -1004,11 +1006,13 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   // Update player x/y if necessary
   find_player(mzx_world);
 
+#ifdef CONFIG_DEBUGGER
   if(mzx_world->debugging && cur_robot == mzx_world->debug_watch.watch)
   {
     if(mzx_world->debug_watch.commands_executed == -1)
       mzx_world->debug_watch.commands_executed = 0;
   }
+#endif
 
   // Main robot loop
 
@@ -5867,11 +5871,11 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
     find_player(mzx_world);
 
 #ifdef CONFIG_DEBUGGER
-    if(mzx_world->debugging && cur_robot == mzx_world->debug_watch.watch)
-      debugger_send(CURRENT_LINE, cur_robot->cur_prog_line);
-
     if(mzx_world->debugging)
     {
+        if(cur_robot == mzx_world->debug_watch.watch)
+            debugger_send(CURRENT_LINE, cur_robot->cur_prog_line);
+
       struct breakpoint *bp;
       for(bp = &mzx_world->debug_watch.breakpoints; bp; bp = bp->next)
       {
@@ -5906,6 +5910,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
   breaker:
 
+#ifdef CONFIG_DEBUGGER
   // Ended a cycle early
   if(mzx_world->debugging && cur_robot == mzx_world->debug_watch.watch
   && (mzx_world->debug_watch.commands_executed < mzx_world->commands || done))
@@ -5914,6 +5919,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
     if(mzx_world->debugging == STEPPING)
       mzx_world->debugging = STEPPING_OTHERS;
   }
+#endif
 
   after_breaker:
 
@@ -5922,3 +5928,4 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   cur_robot->xpos = x;
   cur_robot->ypos = y;
 }
+

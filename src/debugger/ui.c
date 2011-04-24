@@ -34,6 +34,13 @@ void watch_remote_robot(struct world *mzx_world)
 {
   struct breakpoint *bp = &mzx_world->debug_watch.breakpoints;
   struct robot *cur_robot = mzx_world->debug_watch.watch;
+  FILE *bc_file = fsafeopen(DEBUGGER_BYTECODE, "wb");
+  if(bc_file)
+  {
+    fwrite(cur_robot->program_bytecode, cur_robot->program_bytecode_length, 1, bc_file);
+    fclose(bc_file);
+  }
+
   debugger_send(RELOAD_PROGRAM, cur_robot->cur_prog_line);
   while(bp)
   {
@@ -82,16 +89,8 @@ bool watch_robot(struct world *mzx_world)
     dialog_result = run_dialog(mzx_world, &di);
     if(dialog_result == 0)
     {
-      FILE *bc_file;
       struct robot *cur_robot = mzx_world->current_board->robot_list[selected];
       mzx_world->debug_watch.watch = cur_robot;
-            
-      bc_file = fsafeopen(DEBUGGER_BYTECODE, "wb");
-      if(bc_file)
-      {
-        fwrite(cur_robot->program_bytecode, cur_robot->program_bytecode_length, 1, bc_file);
-        fclose(bc_file);
-      }
       watch_remote_robot(mzx_world);
 
       dialog_result = -1;
