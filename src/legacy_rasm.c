@@ -287,7 +287,7 @@ static const int cm118[] = { CMD_ALL, COLOR | STRING, THING, PARAM | STRING,
  IGNORE_TYPE_TO, DIRECTION };
 static const int cm119[] = { IGNORE_TYPE_AT, IMM_S16 | STRING, IMM_S16 | STRING,
  IGNORE_TYPE_TO, IMM_S16 | STRING, IMM_S16 | STRING };
-static const int cm120[] = { CMD_EDGE, CMD_COLOR, IGNORE_TYPE_TO, COLOR };
+static const int cm120[] = { CMD_EDGE, CMD_COLOR, IGNORE_TYPE_TO, COLOR | STRING };
 static const int cm121[] = { IGNORE_TYPE_TO, IGNORE_TYPE_THE, DIRECTION,
  IGNORE_TYPE_IS, STRING };
 static const int cm122[] = { IGNORE_TYPE_TO, IGNORE_TYPE_THE, DIRECTION,
@@ -798,8 +798,7 @@ static const char *const command_fragments[69] =
 /*
   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
 */
-
-static const char special_first_char[256] =
+const char special_first_char[256] =
 {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x00-0x0F
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x10-0x1F
@@ -808,7 +807,7 @@ static const char special_first_char[256] =
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x40-0x4F
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,   // 0x50-0x5F
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x60-0x6F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x70-0x7F
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,   // 0x70-0x7F
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x80-0x8F
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x90-0x9F
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0xA0-0xAF
@@ -1703,11 +1702,14 @@ static int match_command(struct mzx_command_rw *cmd, char *error_buffer)
            cmd->param_types[i3])
           {
             // Can allow char if imm is allowed, and can allow imm if
-            // param is allowed
+            // param is allowed.
+            // We must also ignore CMD and IGNORE_TYPE because these
+            // cause the meanings of the bits to become overloaded.
             if(!(((cmd->param_types[i3] & CHARACTER) &&
              (current_command->param_types[i2] & (IMM_S16 | IMM_U16))) ||
              (((cmd->param_types[i3] & (IMM_S16 | IMM_U16)) &&
-             (current_command->param_types[i2] & PARAM)))))
+             (current_command->param_types[i2] & PARAM)))) ||
+             (cmd->param_types[i3] & (CMD | IGNORE_TYPE)))
             {
               print_error(i3, error_buffer, cmd->param_types[i3],
                current_command->param_types[i2]);
@@ -1815,7 +1817,14 @@ int legacy_assemble_line(char *cpos, char *output_buffer, char *error_buffer,
   current_command.param_types = command_params;
 
   if(cpos[0])
+  {
     rasm_skip_whitespace(cpos + 1, &first_non_space);
+    if(cpos[0] == ' ')
+    {
+      cpos = first_non_space;
+      rasm_skip_whitespace(cpos + 1, &first_non_space);
+    }
+  }
 
   if(!cpos[0] || (cpos[0] == '\n'))
   {
@@ -2496,7 +2505,7 @@ __editor_maybe_static int disassemble_line(char *cpos, char **next,
 void disassemble_file(char *name, char *program, int program_length,
  int allow_ignores, int base)
 {
-  FILE *output_file = fopen(name, "wb");
+  FILE *output_file = fsafeopen(name, "wb");
   char command_buffer[256];
   char error_buffer[256];
   char *current_robot_pos = program + 1;

@@ -37,7 +37,10 @@
 #include "render.h"
 #include "renderers.h"
 #include "platform.h"
+
+#ifdef CONFIG_PNG
 #include "pngops.h"
+#endif
 
 #ifdef CONFIG_SDL
 #include "SDL.h"
@@ -130,7 +133,7 @@ void ec_read_char(Uint8 chr, char *matrix)
 
 Sint32 ec_load_set(char *name)
 {
-  FILE *fp = fopen(name, "rb");
+  FILE *fp = fopen_unsafe(name, "rb");
 
   if(fp == NULL)
    return -1;
@@ -149,7 +152,7 @@ Sint32 ec_load_set(char *name)
 __editor_maybe_static void ec_load_set_secondary(const char *name,
  Uint8 *dest)
 {
-  FILE *fp = fopen(name, "rb");
+  FILE *fp = fopen_unsafe(name, "rb");
 
   if(!fp)
     return;
@@ -165,7 +168,7 @@ __editor_maybe_static void ec_load_set_secondary(const char *name,
 Sint32 ec_load_set_var(char *name, Uint8 pos)
 {
   Uint32 size = CHARSET_SIZE;
-  FILE *fp = fopen(name, "rb");
+  FILE *fp = fopen_unsafe(name, "rb");
 
   if(!fp)
     return -1;
@@ -252,7 +255,7 @@ void update_palette(void)
   update_colors(new_palette, make_palette(new_palette));
 }
 
-static void set_gui_palette(void)
+void set_gui_palette(void)
 {
   int i;
 
@@ -423,7 +426,7 @@ void load_palette(const char *fname)
   int file_size, i, r, g, b;
   FILE *pal_file;
 
-  pal_file = fopen(fname, "rb");
+  pal_file = fopen_unsafe(fname, "rb");
   if(!pal_file)
     return;
 
@@ -807,6 +810,50 @@ static bool set_graphics_output(struct config_info *conf)
   return true;
 }
 
+#if defined(CONFIG_PNG) && defined(CONFIG_SDL) && \
+    defined(CONFIG_ICON) && !defined(__WIN32__)
+
+static bool icon_w_h_constraint(png_uint_32 w, png_uint_32 h)
+{
+  // Icons must be multiples of 16 and square
+  return (w == h) && ((w % 16) == 0) && ((h % 16) == 0);
+}
+
+static void *sdl_alloc_rgba_surface(png_uint_32 w, png_uint_32 h,
+ png_uint_32 *stride, void **pixels)
+{
+  Uint32 rmask, gmask, bmask, amask;
+  SDL_Surface *s;
+
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+  rmask = 0xff000000;
+  gmask = 0x00ff0000;
+  bmask = 0x0000ff00;
+  amask = 0x000000ff;
+#else
+  rmask = 0x000000ff;
+  gmask = 0x0000ff00;
+  bmask = 0x00ff0000;
+  amask = 0xff000000;
+#endif
+
+  s = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 32, rmask, gmask, bmask, amask);
+  if(!s)
+    return NULL;
+
+  *stride = s->pitch;
+  *pixels = s->pixels;
+  return s;
+}
+
+static SDL_Surface *png_read_icon(const char *name)
+{
+  return png_read_file(name, NULL, NULL, icon_w_h_constraint,
+   sdl_alloc_rgba_surface);
+}
+
+#endif // CONFIG_PNG && CONFIG_SDL && CONFIG_ICON && !__WIN32__
+
 bool init_video(struct config_info *conf, const char *caption)
 {
   graphics.screen_mode = 0;
@@ -885,6 +932,7 @@ bool init_video(struct config_info *conf, const char *caption)
     }
   }
 #else // !__WIN32__
+#if defined(CONFIG_PNG)
   {
     SDL_Surface *icon = png_read_icon("/usr/share/icons/megazeux.png");
     if(icon)
@@ -893,6 +941,7 @@ bool init_video(struct config_info *conf, const char *caption)
       SDL_FreeSurface(icon);
     }
   }
+#endif // CONFIG_PNG
 #endif // __WIN32__
 #endif // CONFIG_SDL && CONFIG_ICON
 
@@ -1136,10 +1185,8 @@ void write_string_ext(const char *str, Uint32 x, Uint32 y,
   struct char_element *dest = graphics.text_video + (y * SCREEN_W) + x;
   const char *src = str;
   Uint8 cur_char = *src;
-  Uint8 next_str[2];
   Uint8 bg_color = (color >> 4) + c_offset;
   Uint8 fg_color = (color & 0x0F) + c_offset;
-  next_str[1] = 0;
 
   while(cur_char && (cur_char != 0))
   {
@@ -1182,10 +1229,8 @@ void write_string_mask(const char *str, Uint32 x, Uint32 y,
   struct char_element *dest = graphics.text_video + (y * SCREEN_W) + x;
   const char *src = str;
   Uint8 cur_char = *src;
-  Uint8 next_str[2];
   Uint8 bg_color = (color >> 4) + 16;
   Uint8 fg_color = (color & 0x0F) + 16;
-  next_str[1] = 0;
 
   while(cur_char && (cur_char != 0))
   {
@@ -1235,10 +1280,8 @@ void write_line_ext(const char *str, Uint32 x, Uint32 y,
   struct char_element *dest = graphics.text_video + (y * SCREEN_W) + x;
   const char *src = str;
   Uint8 cur_char = *src;
-  Uint8 next_str[2];
   Uint8 bg_color = (color >> 4) + c_offset;
   Uint8 fg_color = (color & 0x0F) + c_offset;
-  next_str[1] = 0;
 
   while(cur_char && (cur_char != '\n'))
   {
@@ -1272,10 +1315,8 @@ void write_line_mask(const char *str, Uint32 x, Uint32 y,
   struct char_element *dest = graphics.text_video + (y * SCREEN_W) + x;
   const char *src = str;
   Uint8 cur_char = *src;
-  Uint8 next_str[2];
   Uint8 bg_color = (color >> 4) + 16;
   Uint8 fg_color = (color & 0x0F) + 16;
-  next_str[1] = 0;
 
   while(cur_char && (cur_char != '\n'))
   {
@@ -1528,7 +1569,7 @@ static void dump_screen_real(Uint8 *pix, struct rgb_color *pal, int count,
   FILE *file;
   int i;
 
-  file = fopen(name, "wb");
+  file = fopen_unsafe(name, "wb");
   if(!file)
     return;
 

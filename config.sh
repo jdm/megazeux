@@ -28,6 +28,7 @@ usage() {
 	echo "  wii            Experimental Wii port"
 	echo "  amiga          Experimental AmigaOS 4 port"
 	echo "  android        Experimental Android port"
+	echo "  pandora        Experimental Pandora port"
 	echo
 	echo "Supported <option> values (negatives can be used):"
 	echo
@@ -91,7 +92,6 @@ MZXDBG="true"
 HELPSYS="true"
 UTILS="true"
 X11="true"
-X11_PLATFORM="true"
 SOFTWARE="true"
 GL_FIXED="true"
 GL_PROGRAM="true"
@@ -274,8 +274,8 @@ if [ "$PLATFORM" = "win32"   -o "$PLATFORM" = "win64" \
   -o "$PLATFORM" = "mingw32" -o "$PLATFORM" = "mingw64" ]; then
 	[ "$PLATFORM" = "win32" -o "$PLATFORM" = "mingw32" ] && ARCHNAME=x86
 	[ "$PLATFORM" = "win64" -o "$PLATFORM" = "mingw64" ] && ARCHNAME=x64
-	[ "$PLATFORM" = "mingw32" -a "$MINGWBASE" = "" ] && MINGWBASE=i586-mingw32msvc-
-	[ "$PLATFORM" = "mingw64" -a "$MINGWBASE" = "" ] && MINGWBASE=x86_64-pc-mingw32-
+	[ "$PLATFORM" = "mingw32" ] && MINGWBASE=i586-mingw32msvc-
+	[ "$PLATFORM" = "mingw64" ] && MINGWBASE=amd64-mingw32msvc-
 	PLATFORM="mingw"
 	echo "#define PLATFORM \"windows-$ARCHNAME\"" > src/config.h
 	echo "SUBPLATFORM=windows-$ARCHNAME"         >> platform.inc
@@ -453,6 +453,11 @@ if [ "$PLATFORM" = "android" ]; then
 	EGL="true"
 fi
 
+if [ "$PLATFORM" = "pandora" ]; then
+	echo "#define CONFIG_PANDORA" >> src/config.h
+	echo "BUILD_PANDORA=1" >> platform.inc
+fi
+
 #
 # SDL was disabled above; must also disable SDL-dependent modules
 #
@@ -588,28 +593,6 @@ if [ "$PLATFORM" != "unix" -a "$PLATFORM" != "unix-devel" \
 fi
 
 #
-# Force disable icon branding.
-#
-if [ "$ICON" = "true" ]; then
-	if [ "$X11_PLATFORM" = "true" -a "$X11" = "false" ]; then
-		echo "Force-disabling icon branding (X11 disabled)."
-		ICON="false"
-	fi
-
-	if [ "$X11_PLATFORM" = "true" -a "$LIBPNG" = "false" ]; then
-		echo "Force-disabling icon branding (libpng disabled)."
-		ICON="false"
-	fi
-
-	if [ "$PLATFORM" = "darwin" -o "$PLATFORM" = "gp2x" \
-	  -o "$PLATFORM" = "psp" -o "$PLATFORM" = "nds" \
-	  -o "$PLATFORM" = "wii" ]; then
-		echo "Force-disabling icon branding (redundant)."
-		ICON="false"
-	fi
-fi
-
-#
 # Force disable modular DSOs.
 #
 if [ "$PLATFORM" = "gp2x" -o "$PLATFORM" = "nds" \
@@ -735,7 +718,8 @@ fi
 #
 # X11 support (linked against and needs headers installed)
 #
-if [ "$PLATFORM" = "unix" -o "$PLATFORM" = "unix-devel" ]; then
+if [ "$PLATFORM" = "unix" -o "$PLATFORM" = "unix-devel" \
+  -o "$PLATFORM" = "pandora" ]; then
 	#
 	# Confirm the user's selection of X11, if they enabled it
 	#
@@ -753,9 +737,13 @@ if [ "$PLATFORM" = "unix" -o "$PLATFORM" = "unix-devel" ]; then
 			X11="false"
 		fi
 	fi
+
+	if [ "$ICON" = "true" -a "$X11" = "false" ]; then
+		echo "Force-disabling icon branding (X11 disabled)."
+		ICON="false"
+	fi
 else
 	echo "Force-disabling X11 (unsupported platform)."
-	X11_PLATFORM="false"
 	X11="false"
 fi
 
@@ -771,6 +759,18 @@ if [ "$X11" = "true" ]; then
 
 	# pass this along to the build system
 	echo "X11DIR=${X11DIR}" >> platform.inc
+fi
+
+#
+# Force disable icon branding.
+#
+if [ "$ICON" = "true" ]; then
+	if [ "$PLATFORM" = "darwin" -o "$PLATFORM" = "gp2x" \
+	  -o "$PLATFORM" = "psp" -o "$PLATFORM" = "nds" \
+	  -o "$PLATFORM" = "wii" ]; then
+		echo "Force-disabling icon branding (redundant)."
+		ICON="false"
+	fi
 fi
 
 #

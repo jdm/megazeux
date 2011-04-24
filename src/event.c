@@ -23,6 +23,7 @@
 #include "platform.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #define KEY_REPEAT_START    250
 #define KEY_REPEAT_RATE     33
@@ -661,7 +662,7 @@ void warp_mouse_y(Uint32 y)
   status->mouse_y = y;
   status->real_mouse_y = my;
 
-  set_screen_coords(status->real_mouse_y, my, &mx_real, &my_real);
+  set_screen_coords(status->real_mouse_x, my, &mx_real, &my_real);
   real_warp_mouse(mx_real, my_real);
 }
 
@@ -751,4 +752,25 @@ void set_unfocus_pause(bool value)
 void set_num_buffered_events(Uint8 value)
 {
   num_buffered_events = MAX(1, value);
+}
+
+void key_press(struct buffered_status *status, enum keycode key,
+ Uint16 unicode_key)
+{
+  status->keymap[key] = 1;
+  status->key_pressed = key;
+  status->key = key;
+  status->unicode = unicode_key;
+  status->key_repeat = key;
+  status->unicode_repeat = unicode_key;
+  status->keypress_time = get_ticks();
+  status->key_release = IKEY_UNKNOWN;
+}
+
+void key_release(struct buffered_status *status, enum keycode key)
+{
+  status->keymap[key] = 0;
+  status->key_repeat = IKEY_UNKNOWN;
+  status->unicode_repeat = 0;
+  status->key_release = key;
 }

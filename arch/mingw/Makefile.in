@@ -18,8 +18,12 @@ DSOPOST    = .dll
 DSORPATH   =
 DSOSONAME  = -Wl,-soname,
 
-# Drop dependency on libgcc_s_dw2-1.dll
-ARCH_LDFLAGS += -static-libgcc
+# Use MSVCRT directly for stdio; it's faster
+ARCH_CFLAGS   += -D__USE_MINGW_ANSI_STDIO=0
+ARCH_CXXFLAGS += -D__USE_MINGW_ANSI_STDIO=0
+
+# Fix MINGW's shared library fanaticism
+ARCH_LDFLAGS += -static-libstdc++ -static-libgcc
 
 # OpenGL must be linked to MZX
 core_ldflags += -lopengl32
@@ -53,6 +57,7 @@ clean:
 #
 build: ${build}
 	${CP} ${shell sdl-config --prefix}/bin/SDL.dll ${build}
+	${PEFIX} ${build}/SDL.dll
 	${CP} arch/mingw/directx.bat ${build}
 ifeq (${BUILD_UTILS},1)
 	${CP} arch/mingw/checkres* ${build}/utils

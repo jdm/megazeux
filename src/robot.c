@@ -80,15 +80,11 @@ struct label **cache_robot_labels(struct robot *robot, int *num_labels)
 
   for(i = 1; i < (robot->program_bytecode_length - 1); i++)
   {
-    // NOTE: The assignment of 'next' below seems to produce a false positive
-    //       from valgrind, but it's also been a crash vector in the past
-    //       so I'm not entirely sure. Stack corruption maybe?
-
     // Is it a label?
     cmd = robot_program[i + 1];
     next = i + robot_program[i] + 1;
 
-    if((cmd == 106) || (cmd == 108))
+    if((cmd == ROBOTIC_CMD_LABEL) || (cmd == ROBOTIC_CMD_ZAPPED_LABEL))
     {
       current_label = cmalloc(sizeof(struct label));
       current_label->name = robot_program + i + 3;
@@ -96,9 +92,9 @@ struct label **cache_robot_labels(struct robot *robot, int *num_labels)
       if(next >= (robot->program_bytecode_length - 2))
         current_label->position = 0;
       else
-        current_label->position = next + 1;
+        current_label->position = i;
 
-      if(cmd == 108)
+      if(cmd == ROBOTIC_CMD_ZAPPED_LABEL)
         current_label->zapped = 1;
       else
         current_label->zapped = 0;
@@ -278,7 +274,7 @@ void load_robot(struct robot *cur_robot, FILE *fp, int savegame, int version)
 
     // TODO: This has to be made part of what's saved one day.
     cur_robot->label_list =
-     cache_robot_labels(cur_robot, &(cur_robot->num_labels));
+     cache_robot_labels(cur_robot, &cur_robot->num_labels);
 #endif /* CONFIG_DEBYTECODE */
   }
   else
@@ -350,7 +346,7 @@ void load_robot(struct robot *cur_robot, FILE *fp, int savegame, int version)
   if(cur_robot->used)
   {
     cur_robot->label_list =
-     cache_robot_labels(cur_robot, &(cur_robot->num_labels));
+     cache_robot_labels(cur_robot, &cur_robot->num_labels);
   }
 #endif /* !CONFIG_DEBYTECODE */
 }
@@ -1293,6 +1289,8 @@ static int send_robot_direct(struct robot *cur_robot, const char *mesg,
         set_robot_position(cur_robot, return_pos);
       }
       else
+
+      if(send_self)
       {
         // Contextually invalid return; skip the command
         cur_robot->cur_prog_line +=
@@ -1310,6 +1308,8 @@ static int send_robot_direct(struct robot *cur_robot, const char *mesg,
         cur_robot->stack_pointer = 0;
       }
       else
+
+      if(send_self)
       {
         // Contextually invalid top; skip the command
         cur_robot->cur_prog_line +=
@@ -1895,23 +1895,6 @@ char *next_param_pos(char *ptr)
 // Internal only. NOTE- IF WE EVER ALLOW ZAPPING OF LABELS NOT IN CURRENT
 // ROBOT, USE A COPY OF THE *LABEL BEFORE THE PREPARE_ROBOT_MEM!
 
-static int get_label_cmd_offset(struct robot *cur_robot, int position)
-{
-  int label_cmd_offset;
-
-  if(position > 0)
-    return position - cur_robot->program_bytecode[position - 1] - 1;
-
-  // Position will be zero if the label was
-  // the last command in the program..
-
-  // gets us to the length parameter for the last command
-  label_cmd_offset = cur_robot->program_bytecode_length - 1 - 1;
-
-  // then to the base of the last command..
-  return label_cmd_offset - cur_robot->program_bytecode[label_cmd_offset];
-}
-
 // TODO: What we'll want to do is use the label cache instead, so that
 // we're not actually modifying the program.
 
@@ -1924,13 +1907,7 @@ int restore_label(struct robot *cur_robot, char *label)
 
   if(dest_label)
   {
-    int label_cmd_offset =
-     get_label_cmd_offset(cur_robot, dest_label->position);
-
-    assert(label_cmd_offset > 0 &&
-           label_cmd_offset < cur_robot->program_bytecode_length);
-
-    cur_robot->program_bytecode[label_cmd_offset] = 106;
+    cur_robot->program_bytecode[dest_label->position + 1] = ROBOTIC_CMD_LABEL;
     dest_label->zapped = 0;
     return 1;
   }
@@ -1944,13 +1921,7 @@ int zap_label(struct robot *cur_robot, char *label)
 
   if(dest_label)
   {
-    int label_cmd_offset =
-     get_label_cmd_offset(cur_robot, dest_label->position);
-
-    assert(label_cmd_offset > 0 &&
-           label_cmd_offset < cur_robot->program_bytecode_length);
-
-    cur_robot->program_bytecode[label_cmd_offset] = 108;
+    cur_robot->program_bytecode[dest_label->position + 1] = ROBOTIC_CMD_ZAPPED_LABEL;
     dest_label->zapped = 1;
     return 1;
   }
@@ -2185,9 +2156,7 @@ void robot_box_display(struct world *mzx_world, char *program,
 {
   struct board *src_board = mzx_world->current_board;
   struct robot *cur_robot = src_board->robot_list[id];
-  int pos = 0, old_pos;
-  int key;
-  int mouse_press;
+  int pos = 0, key, mouse_press;
 
   label_storage[0] = 0;
 
@@ -2259,8 +2228,6 @@ void robot_box_display(struct world *mzx_world, char *program,
 
     update_event_status_delay();
     key = get_key(keycode_internal);
-
-    old_pos = pos;
 
     mouse_press = get_mouse_press_ext();
 
@@ -2845,18 +2812,13 @@ __editor_maybe_static
 void duplicate_robot_direct(struct robot *cur_robot,
  struct robot *copy_robot, int x, int y)
 {
-  struct label *src_label, *dest_label;
   char *dest_program_location, *src_program_location;
-  int program_offset;
   int program_length;
-  int num_labels;
-  int i;
 
 #ifdef CONFIG_DEBYTECODE
   prepare_robot_bytecode(cur_robot);
 #endif
   program_length = cur_robot->program_bytecode_length;
-  num_labels = cur_robot->num_labels;
 
   // Copy all the contents
   memcpy(copy_robot, cur_robot, sizeof(struct robot));
@@ -2868,25 +2830,8 @@ void duplicate_robot_direct(struct robot *cur_robot,
 
   memcpy(dest_program_location, src_program_location, program_length);
 
-  if(num_labels)
-    copy_robot->label_list = ccalloc(num_labels, sizeof(struct label *));
-  else
-    copy_robot->label_list = NULL;
-
-  program_offset = (int)(dest_program_location - src_program_location);
-
-  // Copy each individual label pointer over
-  for(i = 0; i < num_labels; i++)
-  {
-    copy_robot->label_list[i] = cmalloc(sizeof(struct label));
-
-    src_label = cur_robot->label_list[i];
-    dest_label = copy_robot->label_list[i];
-
-    memcpy(dest_label, src_label, sizeof(struct label));
-    // The name pointer actually has to be readjusted to match the new program
-    dest_label->name += program_offset;
-  }
+  copy_robot->label_list =
+   cache_robot_labels(cur_robot, &cur_robot->num_labels);
 
 #ifdef CONFIG_DEBYTECODE
   copy_robot->program_source = NULL;
@@ -3177,7 +3122,7 @@ void prepare_robot_bytecode(struct robot *cur_robot)
     // robot's actually used. But eventually this should be combined with
     // assemble_program.
     cur_robot->label_list =
-     cache_robot_labels(cur_robot, &(cur_robot->num_labels));
+     cache_robot_labels(cur_robot, &cur_robot->num_labels);
 
     // Can free source code now.
     free(cur_robot->program_source);

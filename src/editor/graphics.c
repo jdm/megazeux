@@ -47,11 +47,12 @@ void load_editor_palette(void)
 {
   memcpy(graphics.palette, graphics.editor_backup_palette,
    sizeof(struct rgb_color) * SMZX_PAL_SIZE);
+  set_gui_palette();
 }
 
 void save_palette(char *fname)
 {
-  FILE *pal_file = fopen(fname, "wb");
+  FILE *pal_file = fopen_unsafe(fname, "wb");
 
   if(pal_file)
   {
@@ -77,25 +78,24 @@ void draw_char_linear(Uint8 color, Uint8 chr, Uint32 offset)
   draw_char_linear_ext(color, chr, offset, 256, 16);
 }
 
-void clear_screen_no_update(Uint8 chr, Uint8 color)
+void clear_screen_no_update(void)
 {
-  Uint32 i;
-  Uint8 fg_color = color & 0x0F;
-  Uint8 bg_color = color >> 4;
   struct char_element *dest = graphics.text_video;
+  Uint32 i;
 
   for(i = 0; i < (SCREEN_W * SCREEN_H); i++)
   {
-    dest->char_value = chr;
-    dest->fg_color = fg_color;
-    dest->bg_color = bg_color;
+    // use protected charset and palette
+    dest->char_value = 177 + 256;
+    dest->fg_color = 1 + 16;
+    dest->bg_color = 0 + 16;
     dest++;
   }
 }
 
 void ec_save_set_var(char *name, Uint8 offset, Uint32 size)
 {
-  FILE *fp = fopen(name, "wb");
+  FILE *fp = fopen_unsafe(name, "wb");
 
   if(fp)
   {

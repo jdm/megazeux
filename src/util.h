@@ -28,7 +28,7 @@
 
 __M_BEGIN_DECLS
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) && !defined(__amigaos__)
 #include <unistd.h>
 #endif
 
@@ -72,7 +72,7 @@ CORE_LIBSPEC void mzx_res_free(void);
 CORE_LIBSPEC char *mzx_res_get_by_id(enum resource_id id);
 
 CORE_LIBSPEC long ftell_and_rewind(FILE *f);
-int Random(int range);
+unsigned int Random(unsigned long long range);
 
 CORE_LIBSPEC ssize_t get_path(const char *file_name, char *dest, unsigned int buf_len);
 #ifdef CONFIG_UTILS
@@ -102,9 +102,20 @@ typedef DIR dir_t;
 
 #endif // CONFIG_NDS || CONFIG_WII
 
-dir_t *dir_open(const char *path);
-void dir_close(dir_t *dir);
-int dir_get_next_entry(dir_t *dir, char *entry);
+struct mzx_dir {
+#ifdef CONFIG_PSP
+  char path[PATH_BUF_LEN];
+#endif
+  dir_t *d;
+  long entries;
+  long pos;
+};
+
+bool dir_open(struct mzx_dir *dir, const char *path);
+void dir_close(struct mzx_dir *dir);
+void dir_seek(struct mzx_dir *dir, long offset);
+long dir_tell(struct mzx_dir *dir);
+bool dir_get_next_entry(struct mzx_dir *dir, char *entry);
 
 #if defined(__WIN32__) && defined(__STRICT_ANSI__)
 CORE_LIBSPEC int strcasecmp(const char *s1, const char *s2);

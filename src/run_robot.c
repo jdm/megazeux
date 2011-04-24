@@ -355,7 +355,7 @@ static int get_random_range(int min_value, int max_value)
       min_value = max_value;
     }
 
-    result = (Random(difference + 1)) + min_value;
+    result = Random((unsigned long long)difference + 1) + min_value;
   }
 
   return result;
@@ -868,6 +868,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   int gotoed;
 
   int old_pos; // Old position to verify gotos DID something
+  int last_label = -1;
   // Whether blocked in a given direction (2 = OUR bullet)
   int _bl[4] = { 0, 0, 0, 0 };
   char *program;
@@ -1332,6 +1333,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
             set_counter(mzx_world, dest_buffer, value, id);
           }
         }
+        last_label = -1;
         break;
       }
 
@@ -1374,6 +1376,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
           int value = parse_param(mzx_world, src_string, id);
           inc_counter(mzx_world, dest_buffer, value, id);
         }
+        last_label = -1;
         break;
       }
 
@@ -1398,6 +1401,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
           // Set to counter
           dec_counter(mzx_world, dest_buffer, value, id);
         }
+        last_label = -1;
         break;
       }
 
@@ -2044,6 +2048,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         char dest_buffer[ROBOT_MAX_TR];
         tr_msg(mzx_world, cmd_ptr + 2, id, dest_buffer);
         mul_counter(mzx_world, dest_buffer, 2, id);
+        last_label = -1;
         break;
       }
 
@@ -2052,6 +2057,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         char dest_buffer[ROBOT_MAX_TR];
         tr_msg(mzx_world, cmd_ptr + 2, id, dest_buffer);
         div_counter(mzx_world, dest_buffer, 2, id);
+        last_label = -1;
         break;
       }
 
@@ -2119,6 +2125,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         char *p2 = next_param_pos(cmd_ptr + 1);
         int item_number = *(p2 + 1);
         inc_counter(mzx_world, item_to_counter[item_number], amount, 0);
+        last_label = -1;
         break;
       }
 
@@ -2127,15 +2134,14 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         int amount = parse_param(mzx_world, cmd_ptr + 1, id);
         char *p2 = next_param_pos(cmd_ptr + 1);
         int item_number = *(p2 + 1);
-        int success = 0;
 
         if(get_counter(mzx_world, item_to_counter[item_number], 0) >=
          amount)
         {
           dec_counter(mzx_world, item_to_counter[item_number], amount, 0);
-          success = 1;
         }
 
+        last_label = -1;
         break;
       }
 
@@ -2144,13 +2150,11 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         int amount = parse_param(mzx_world, cmd_ptr + 1, id);
         char *p2 = next_param_pos(cmd_ptr + 1);
         int item_number = *(p2 + 1);
-        int success = 0;
 
         if(get_counter(mzx_world, item_to_counter[item_number], 0) >=
          amount)
         {
           dec_counter(mzx_world, item_to_counter[item_number], amount, 0);
-          success = 1;
         }
         else
         {
@@ -2621,15 +2625,6 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
             if(_bl[direction])
               _bl[direction] = 3;
-
-            // Move on to the next command; the robot isn't
-            // sent anywhere, so otherwise it'll just keep
-            // re-doing the shoot if we end the cycle..
-            cur_robot->cur_prog_line += program[cur_robot->cur_prog_line] + 2;
-            if(!program[cur_robot->cur_prog_line])
-              goto end_prog;
-
-            goto breaker;
           }
         }
         break;
@@ -2669,15 +2664,6 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
           {
             shoot_missile(mzx_world, x, y, dir_to_int(direction));
             calculate_blocked(mzx_world, x, y, id, _bl);
-
-            // Move on to the next command; the robot isn't
-            // sent anywhere, so otherwise it'll just keep
-            // re-doing the shoot if we end the cycle..
-            cur_robot->cur_prog_line += program[cur_robot->cur_prog_line] + 2;
-            if(!program[cur_robot->cur_prog_line])
-              goto end_prog;
-
-            goto breaker;
           }
         }
         break;
@@ -2693,15 +2679,6 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
           {
             shoot_seeker(mzx_world, x, y, dir_to_int(direction));
             calculate_blocked(mzx_world, x, y, id, _bl);
-
-            // Move on to the next command; the robot isn't
-            // sent anywhere, so otherwise it'll just keep
-            // re-doing the shoot if we end the cycle..
-            cur_robot->cur_prog_line += program[cur_robot->cur_prog_line] + 2;
-            if(!program[cur_robot->cur_prog_line])
-              goto end_prog;
-
-            goto breaker;
           }
         }
         break;
@@ -2717,15 +2694,6 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
           {
             shoot_fire(mzx_world, x, y, dir_to_int(direction));
             calculate_blocked(mzx_world, x, y, id, _bl);
-
-            // Move on to the next command; the robot isn't
-            // sent anywhere, so otherwise it'll just keep
-            // re-doing the shoot if we end the cycle..
-            cur_robot->cur_prog_line += program[cur_robot->cur_prog_line] + 2;
-            if(!program[cur_robot->cur_prog_line])
-              goto end_prog;
-
-            goto breaker;
           }
         }
         break;
@@ -3167,6 +3135,8 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
           dec_counter(mzx_world, item_to_counter[take_type], take_num, 0);
           inc_counter(mzx_world, item_to_counter[give_type], give_num, 0);
         }
+
+        last_label = -1;
         break;
       }
 
@@ -3637,7 +3607,9 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
       case ROBOTIC_CMD_SET_EDGE_COLOR: // set edge color
       {
-        mzx_world->edge_color = parse_param(mzx_world, cmd_ptr + 1, id);
+        int new_color = parse_param(mzx_world, cmd_ptr + 1, id);
+        mzx_world->edge_color =
+         fix_color(new_color, mzx_world->edge_color);
         break;
       }
 
@@ -3742,10 +3714,8 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
       case ROBOTIC_CMD_AVALANCHE: // avalanche
       {
-        int x, y, offset;
-        // Set the placement rate
-        int placement_rate = 18;
-        int d_flag;
+        int placement_period = 18;
+        int x, y, offset, d_flag;
 
         for(y = 0, offset = 0; y < board_height; y++)
         {
@@ -3754,7 +3724,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
             d_flag = flags[(int)level_id[offset]];
 
             if((d_flag & A_UNDER) && !(d_flag & A_ENTRANCE) &&
-             (Random(placement_rate)) == 0)
+             (Random(placement_period)) == 0)
             {
               id_place(mzx_world, x, y, BOULDER, 7, 0);
             }
@@ -4258,6 +4228,12 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
         if(viewport_height == 0)
           viewport_height = 1;
+
+        if(viewport_width > src_board->board_width)
+          viewport_width = src_board->board_width;
+
+        if(viewport_height > src_board->board_height)
+          viewport_height = src_board->board_height;
 
         if((viewport_x + viewport_width) > 80)
           src_board->viewport_x = 80 - viewport_width;
@@ -5357,6 +5333,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         tr_msg(mzx_world, dest_string, id, dest_buffer);
 
         mul_counter(mzx_world, dest_buffer, value, id);
+        last_label = -1;
         break;
       }
 
@@ -5369,6 +5346,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         tr_msg(mzx_world, dest_string, id, dest_buffer);
 
         div_counter(mzx_world, dest_buffer, value, id);
+        last_label = -1;
         break;
       }
 
@@ -5381,6 +5359,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         tr_msg(mzx_world, dest_string, id, dest_buffer);
 
         mod_counter(mzx_world, dest_buffer, value, id);
+        last_label = -1;
         break;
       }
 
@@ -5712,13 +5691,12 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         char *p2 = next_param_pos(cmd_ptr + 1);
         int dest_color = parse_param(mzx_world, p2, id);
         int src_fg, src_bg, i;
-        char *overlay, *overlay_color;
+        char *overlay_color;
         int d_color;
 
         if(!src_board->overlay_mode)
           setup_overlay(src_board, 3);
 
-        overlay = src_board->overlay;
         overlay_color = src_board->overlay_color;
 
         split_colors(src_color, &src_fg, &src_bg);
@@ -5805,6 +5783,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         }
 
         cur_robot->loop_count = loop_count + 1;
+        last_label = -1;
         break;
       }
 
@@ -5836,6 +5815,35 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
       case ROBOTIC_CMD_ENABLE_MESG_EDGE: // Enable mesg edge
       {
         mzx_world->mesg_edges = 1;
+        break;
+      }
+
+      case ROBOTIC_CMD_LABEL:
+      {
+        // Prior to the port, MZX would end the cycle if a label was
+        // seen more than once in that cycle. This behaviour was
+        // exploited in certain pre-port games such as "Kya's Sword" and
+        // "Stones & Roks II", where it would interact with the SHOOT
+        // command and alter the timing when SHOOT was in a tight loop.
+
+        // We don't really care for this behaviour in the port, and the
+        // compatibility has been broken forever, so only do this for
+        // old worlds.
+
+        if(mzx_world->version <= 0x0249)
+        {
+          if(last_label == cur_robot->cur_prog_line)
+            goto breaker;
+          last_label = cur_robot->cur_prog_line;
+        }
+
+        lines_run--;
+        break;
+      }
+
+      case ROBOTIC_CMD_ZAPPED_LABEL:
+      {
+        lines_run--;
         break;
       }
     }

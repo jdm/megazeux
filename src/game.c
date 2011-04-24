@@ -531,12 +531,10 @@ static void give_potion(struct world *mzx_world, enum potion type)
 
     case POTION_BLAST:
     {
-      int x, y, offset;
+      int placement_period = 18;
+      int x, y, offset, d_flag;
       enum thing d_id;
-      int d_flag;
 
-      // Set the placement rate
-      int placement_rate = 18;
       for(y = 0, offset = 0; y < board_height; y++)
       {
         for(x = 0; x < board_width; x++, offset++)
@@ -548,7 +546,7 @@ static void give_potion(struct world *mzx_world, enum potion type)
           {
             // Adjust the ratio for board size
 
-            if(Random(placement_rate) == 0)
+            if(Random(placement_period) == 0)
             {
               id_place(mzx_world, x, y, EXPLOSION, 0,
                16 * ((Random(5)) + 2));
@@ -678,9 +676,8 @@ static void give_potion(struct world *mzx_world, enum potion type)
 
     case POTION_AVALANCHE:
     {
+      int placement_period = 18;
       int x, y, offset;
-      // Adjust the rate for board size - it was hardcoded for 10000
-      int placement_rate = 18 * (board_width * board_height) / 10000;
 
       for(y = 0, offset = 0; y < board_height; y++)
       {
@@ -690,7 +687,7 @@ static void give_potion(struct world *mzx_world, enum potion type)
 
           if((d_flag & A_UNDER) && !(d_flag & A_ENTRANCE))
           {
-            if((Random(placement_rate)) == 0)
+            if((Random(placement_period)) == 0)
             {
               id_place(mzx_world, x, y, BOULDER, 7, 0);
             }
@@ -915,7 +912,6 @@ static int update(struct world *mzx_world, int game, int *fadein)
   int board_height = src_board->board_height;
   char *level_id = src_board->level_id;
   char *level_color = src_board->level_color;
-  char *level_param = src_board->level_param;
   char *level_under_id = src_board->level_under_id;
   char *level_under_color = src_board->level_under_color;
   char *level_under_param = src_board->level_under_param;
@@ -1578,7 +1574,6 @@ static int update(struct world *mzx_world, int game, int *fadein)
     }
 
     level_id = src_board->level_id;
-    level_param = src_board->level_param;
     level_color = src_board->level_color;
     level_under_id = src_board->level_under_id;
     level_under_param = src_board->level_under_param;
@@ -1878,9 +1873,10 @@ __editor_maybe_static void play_game(struct world *mzx_world)
                 // Save entire game
                 save_world(mzx_world, curr_sav, 1);
               }
+
+              update_event_status();
             }
           }
-          update_event_status();
           break;
         }
 
@@ -1890,7 +1886,7 @@ __editor_maybe_static void play_game(struct world *mzx_world)
            get_counter(mzx_world, "LOAD_MENU", 0))
           {
             // Restore
-            char save_file_name[64];
+            char save_file_name[64] = { 0 };
             m_show();
 
             if(!choose_file_ch(mzx_world, save_ext, save_file_name,
@@ -2309,7 +2305,7 @@ void title_screen(struct world *mzx_world)
         case IKEY_F4:
         case IKEY_r:
         {
-          char save_file_name[64];
+          char save_file_name[64] = { 0 };
 
           // Restore
           m_show();
@@ -2444,7 +2440,7 @@ void title_screen(struct world *mzx_world)
               send_robot_def(mzx_world, 0, 10);
 
               if(strcmp(src_board->mod_playing, "*") &&
-               strcmp(src_board->mod_playing, old_mod_playing))
+               strcasecmp(src_board->mod_playing, old_mod_playing))
               {
                 load_board_module(src_board);
               }
@@ -2494,7 +2490,19 @@ void title_screen(struct world *mzx_world)
         case IKEY_u:
         {
           if(check_for_updates)
+          {
+            int current_sfx_vol = get_sfx_volume();
+            int current_music_vol = get_music_volume();
+            set_sfx_volume(0);
+            set_music_volume(0);
+            if(mzx_world->active)
+              volume_module(0);
             check_for_updates(&mzx_world->conf);
+            set_sfx_volume(current_sfx_vol);
+            set_music_volume(current_music_vol);
+            if(mzx_world->active)
+              volume_module(src_board->volume);
+          }
           break;
         }
 

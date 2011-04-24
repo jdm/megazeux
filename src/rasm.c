@@ -21,12 +21,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <ctype.h>
 
 #include "data.h"
 #include "rasm.h"
 #include "fsafeopen.h"
 #include "util.h"
+#include "counter.h"
+
+#ifdef CONFIG_DEBYTECODE
 
 #define ARG_TYPE_FRAGMENT_NOT            ARG_TYPE_FRAGMENT | 0
 #define ARG_TYPE_FRAGMENT_ANY            ARG_TYPE_FRAGMENT | 1
@@ -2312,27 +2314,6 @@ static const char *const command_fragment_type_names[69] =
   "no"
 };
 
-//  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-static const char special_first_char[256] =
-{
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x00-0x0F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x10-0x1F
-  0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1,   // 0x20-0x2F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,   // 0x30-0x3F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x40-0x4F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,   // 0x50-0x5F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x60-0x6F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x70-0x7F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x80-0x8F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0x90-0x9F
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0xA0-0xAF
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0xB0-0xBF
-  0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,   // 0xC0-0xCF
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0xD0-0xDF
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 0xE0-0xEF
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0    // 0xF0-0xFF
-};
-
 static const struct special_word sorted_special_word_list[] =
 {
   { "a",                ARG_TYPE_IGNORE_A,               ARG_TYPE_IGNORE    },
@@ -2700,30 +2681,6 @@ static char *find_comment(char *src)
 
   return src;
 }
-
-
-static char *skip_nested_expressions(char *src, bool skip_string_expressions)
-{
-  char terminator;
-
-  if(*src == '(')
-    terminator = ')';
-  else
-    terminator = '>';
-
-  src++;
-
-  while(*src != terminator)
-  {
-    if((*src == '(') || (skip_string_expressions && (*src == '<')))
-      src = skip_nested_expressions(src, skip_string_expressions);
-
-    src++;
-  }
-
-  return src + 1;
-}
-
 
 static int get_param(char *cmd_line)
 {
@@ -3159,6 +3116,10 @@ static char *get_token(char *src, struct token *token)
         token_type = TOKEN_TYPE_NUMERIC_LITERAL_BASE10;
       }
 
+      if (token->arg_value.numeric_literal < -32768 ||
+       token->arg_value.numeric_literal > 32767)
+        token_type |= TOKEN_TYPE_INVALID;
+
       if(next == src)
         token_type |= TOKEN_TYPE_INVALID;
 
@@ -3311,11 +3272,11 @@ struct command_set
   const char *const name;
   int name_length;
   int count;
-  const int *const offsets;
+  const int offsets[16];
 };
 
-#define command_set(name, count, ...)                                  \
-  { name, sizeof(name) - 1, count, (int []){ __VA_ARGS__ } }           \
+#define command_set(name, count, ...) \
+  { name, sizeof(name) - 1, count, { __VA_ARGS__ } }
 
 static const struct command_set sorted_command_list[] =
 {
@@ -3485,7 +3446,7 @@ static const struct command_set sorted_command_list[] =
 static const int num_command_names =
  sizeof(sorted_command_list) / sizeof(struct command_set);
 
-static struct command_set empty_command_set = { "", 0, 0, (int []){ 0 } };
+static struct command_set empty_command_set = { "", 0, 0, { 0 } };
 
 static const struct command_set *find_command_set(const char *name,
  int name_length)
@@ -4007,7 +3968,6 @@ __editor_maybe_static struct token *parse_command(char *src, char **_next,
   int command_name_length;
   int arg_in_match;
   char *command_base;
-  char *command_arg_base;
   char *next;
   int match_strength;
   int best_match_strength = 10000;
@@ -4048,7 +4008,6 @@ __editor_maybe_static struct token *parse_command(char *src, char **_next,
 
   command_base = next;
   next += command_set->name_length;
-  command_arg_base = next;
 
   token_collection_initialize(&token_collection, next);
 
@@ -4148,7 +4107,7 @@ __editor_maybe_static struct token *parse_command(char *src, char **_next,
 #define assemble_get_token_skip_comments()                                     \
   token++;                                                                     \
                                                                                \
-  while(token->type == ARG_TYPE_INDEXED_COMMENT)                               \
+  while(token->type == TOKEN_TYPE_COMMENT)                                     \
   {                                                                            \
     token++;                                                                   \
   }                                                                            \
@@ -5075,7 +5034,7 @@ static char *legacy_disassemble_print_string_expressions(char *src,
         char *next;
         char *base_output;
         char *name_offset;
-        bool is_string = false;
+        bool is_real_string;
 
         src++;
 
@@ -5108,51 +5067,7 @@ static char *legacy_disassemble_print_string_expressions(char *src,
           next++;
         }
 
-        if(base_output[1] == '$')
-        {
-          // Is it or isn't it a string. This is actually tricky. What
-          // has to be done is that we have to go from the start to the
-          // end, skip any intermediate expressions (or string expressions)
-          // until we find a ., then see if the next thing is a number,
-          // "length", or another expression (normal one, not string)
-          char *check_str = base_output + 1;
-
-          *output = 0;
-          is_string = true;
-
-          while(check_str != output)
-          {
-            switch(*check_str)
-            {
-              case '\\':
-                check_str++;
-                break;
-
-              case '(':
-              case '<':
-                check_str = skip_nested_expressions(check_str, true);
-                break;
-
-              case '.':
-                // If it's a number until the end, or it's "length",
-                // or it's an expression then it's not a string.
-                check_str++;
-                if((skip_decimal(check_str) == output) ||
-                 (!strcasecmp(check_str, "length")) ||
-                 ((*check_str == '(') &&
-                 (skip_nested_expressions(check_str, true) == output)))
-                {
-                  is_string = false;
-                }
-
-                break;
-
-              default:
-                check_str++;
-                break;
-            }
-          }
-        }
+        is_real_string = is_string(base_output + 1);
 
         if(!is_simple_identifier_name(name_offset, name_length, true))
         {
@@ -5162,7 +5077,7 @@ static char *legacy_disassemble_print_string_expressions(char *src,
           output += 2;
         }
 
-        if(is_string)
+        if(is_real_string)
         {
           *base_output = '<';
           *output = '>';
@@ -5683,3 +5598,4 @@ char *legacy_convert_file(char *file_name, int *_disasm_length,
   return NULL;
 }
 
+#endif /* CONFIG_DEBYTECODE */

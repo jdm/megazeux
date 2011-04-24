@@ -106,7 +106,7 @@ static void synchronize_board_values(struct world *mzx_world,
   *level_color = (*src_board)->level_color;
   *overlay = (*src_board)->overlay;
   *overlay_color = (*src_board)->overlay_color;
-  clear_screen_no_update(177, 1);
+  clear_screen_no_update();
 }
 
 static void fix_scroll(int *cursor_board_x, int *cursor_board_y,
@@ -619,10 +619,16 @@ static void thing_menu(struct world *mzx_world, int menu_number,
  struct robot *copy_robot, struct scroll *copy_scroll,
  struct sensor *copy_sensor, int x, int y)
 {
+  struct board *src_board = mzx_world->current_board;
+  int color, param, chosen, old_id = *new_id;
   enum thing id;
-  int color, param;
-  int chosen;
-  int old_id = *new_id;
+
+  id = (enum thing)src_board->level_id[x + (y * src_board->board_width)];
+  if(id == PLAYER)
+  {
+    error("Cannot overwrite the player- move it first", 0, 8, 0x0000);
+    return;
+  }
 
   cursor_off();
   chosen =
@@ -1113,7 +1119,7 @@ static void __edit_world(struct world *mzx_world)
 
     saved_overlay_mode = src_board->overlay_mode;
 
-    clear_screen_no_update(177, 1);
+    clear_screen_no_update();
 
     if(!overlay_edit)
     {
@@ -1410,7 +1416,7 @@ static void __edit_world(struct world *mzx_world)
         if((cursor_board_x - scroll_x) < (debug_x + 25))
         {
           debug_x = 60;
-          clear_screen_no_update(177, 1);
+          clear_screen_no_update();
         }
 
         break;
@@ -1449,7 +1455,7 @@ static void __edit_world(struct world *mzx_world)
         if((cursor_board_x - scroll_x) > (debug_x - 5))
         {
           debug_x = 0;
-          clear_screen_no_update(177, 1);
+          clear_screen_no_update();
         }
 
         break;
@@ -1878,7 +1884,7 @@ static void __edit_world(struct world *mzx_world)
         if((cursor_board_x - scroll_x) < (debug_x + 25))
         {
           debug_x = 60;
-          clear_screen_no_update(177, 1);
+          clear_screen_no_update();
         }
 
         break;
@@ -1900,7 +1906,7 @@ static void __edit_world(struct world *mzx_world)
         if((cursor_board_x - scroll_x) > (debug_x - 5))
         {
           debug_x = 0;
-          clear_screen_no_update(177, 1);
+          clear_screen_no_update();
         }
 
         break;
@@ -2118,7 +2124,7 @@ static void __edit_world(struct world *mzx_world)
                 {
                   FILE *sfx_file;
 
-                  sfx_file = fopen(import_name, "rb");
+                  sfx_file = fopen_unsafe(import_name, "rb");
                   fread(mzx_world->custom_sfx, 69, 50, sfx_file);
                   mzx_world->custom_sfx_on = 1;
                   fclose(sfx_file);
@@ -2292,7 +2298,7 @@ static void __edit_world(struct world *mzx_world)
                 {
                   FILE *sfx_file;
 
-                  sfx_file = fopen(export_name, "wb");
+                  sfx_file = fopen_unsafe(export_name, "wb");
 
                   if(sfx_file)
                   {
@@ -2707,7 +2713,7 @@ static void __edit_world(struct world *mzx_world)
             if((cursor_board_x - scroll_x) < (debug_x + 25))
             {
               debug_x = 60;
-              clear_screen_no_update(177, 1);
+              clear_screen_no_update();
             }
           }
           else
@@ -2728,7 +2734,7 @@ static void __edit_world(struct world *mzx_world)
               if((cursor_board_x - scroll_x) > (debug_x - 5))
               {
                 debug_x = 0;
-                clear_screen_no_update(177, 1);
+                clear_screen_no_update();
               }
             }
           }
@@ -3214,7 +3220,7 @@ static void __edit_world(struct world *mzx_world)
           } while(v_key != IKEY_ESCAPE);
 
           m_show();
-          clear_screen_no_update(177, 1);
+          clear_screen_no_update();
         }
         else
         {
@@ -3610,7 +3616,7 @@ static void __edit_world(struct world *mzx_world)
           if(edit_screen_height == EDIT_SCREEN_NORMAL)
           {
             edit_screen_height = EDIT_SCREEN_EXTENDED;
-            clear_screen_no_update(177, 1);
+            clear_screen_no_update();
 
             if((scroll_y + 25) > board_height)
               scroll_y = board_height - 25;
@@ -3667,7 +3673,7 @@ static void __edit_world(struct world *mzx_world)
         if((cursor_board_x - scroll_x) > (debug_x - 5))
         {
           debug_x = 0;
-          clear_screen_no_update(177, 1);
+          clear_screen_no_update();
         }
 
         modified = 1;

@@ -35,27 +35,33 @@ typedef struct tagSAMPLE669
 	BYTE loopend[4];
 } SAMPLE669;
 
+DWORD lengthArrayToDWORD(const BYTE length[4]) {
+	DWORD len = (length[3] << 24) +
+		(length[2] << 16) +
+		(length[1] << 8) +
+		(length[0]);
+
+	return(len);
+}
+
 
 BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 //---------------------------------------------------------------
 {
-	BOOL b669Ext;
 	const FILEHEADER669 *pfh = (const FILEHEADER669 *)lpStream;
 	const SAMPLE669 *psmp = (const SAMPLE669 *)(lpStream + 0x1F1);
 	DWORD dwMemPos = 0;
 
 	if ((!lpStream) || (dwMemLength < sizeof(FILEHEADER669))) return FALSE;
 	if ((bswapLE16(pfh->sig) != 0x6669) && (bswapLE16(pfh->sig) != 0x4E4A)) return FALSE;
-	b669Ext = (bswapLE16(pfh->sig) == 0x4E4A) ? TRUE : FALSE;
 	if ((!pfh->samples) || (pfh->samples > 64) || (pfh->restartpos >= 128)
 	 || (!pfh->patterns) || (pfh->patterns > 128)) return FALSE;
 	DWORD dontfuckwithme = 0x1F1 + pfh->samples * sizeof(SAMPLE669) + pfh->patterns * 0x600;
 	if (dontfuckwithme > dwMemLength) return FALSE;
 	for (UINT ichk=0; ichk<pfh->samples; ichk++)
 	{
-		DWORD tmp;
-		memcpy(&tmp, &psmp[ichk].length, sizeof(DWORD));
-		dontfuckwithme += bswapLE32(tmp);
+		DWORD len = lengthArrayToDWORD(psmp[ichk].length);
+		dontfuckwithme += len;
 	}
 	if (dontfuckwithme > dwMemLength) return FALSE;
 	// That should be enough checking: this must be a 669 module.
@@ -70,15 +76,9 @@ BOOL CSoundFile::Read669(const BYTE *lpStream, DWORD dwMemLength)
 	m_nSamples = pfh->samples;
 	for (UINT nins=1; nins<=m_nSamples; nins++, psmp++)
 	{
-		DWORD tmp, len, loopstart, loopend;
-
-		memcpy(&tmp, &psmp->length, sizeof(DWORD));
-		len = bswapLE32(tmp);
-		memcpy(&tmp, &psmp->loopstart, sizeof(DWORD));
-		loopstart = bswapLE32(tmp);
-		memcpy(&tmp, &psmp->loopend, sizeof(DWORD));
-		loopend = bswapLE32(tmp);
-
+		DWORD len = lengthArrayToDWORD(psmp->length);
+		DWORD loopstart = lengthArrayToDWORD(psmp->loopstart);
+		DWORD loopend = lengthArrayToDWORD(psmp->loopend);
 		if (len > MAX_SAMPLE_LENGTH) len = MAX_SAMPLE_LENGTH;
 		if ((loopend > len) && (!loopstart)) loopend = 0;
 		if (loopend > len) loopend = len;

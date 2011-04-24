@@ -1,6 +1,7 @@
 arch/mingw/pefix.d
 arch/mingw/pefix.exe
 arch/mingw/pefix.o
+build
 contrib/gdm2s3m/src/.build/
 contrib/icons/.build/
 contrib/libmodplug/src/.build/
@@ -27,5 +28,7 @@ src/utils/hlp2txt.exe
 src/utils/hlp2txt
 src/utils/txt2hlp.exe
 src/utils/txt2hlp
+src/utils/png2smzx.exe
+src/utils/png2smzx
 stdout.txt
 stderr.txt

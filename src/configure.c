@@ -91,6 +91,19 @@ static void config_set_network_enabled(struct config_info *conf, char *name,
   conf->network_enabled = strtoul(value, NULL, 10);
 }
 
+static void config_set_socks_host(struct config_info *conf, char *name,
+ char *value, char *extended_data)
+{
+  strncpy(conf->socks_host, value, 256);
+  conf->socks_host[256 - 1] = 0;
+}
+
+static void config_set_socks_port(struct config_info *conf, char *name,
+ char *value, char *extended_data)
+{
+  conf->socks_port = strtoul(value, NULL, 10);
+}
+
 #endif // CONFIG_NETWORK
 
 #ifdef CONFIG_UPDATER
@@ -417,6 +430,10 @@ static const struct config_entry config_options[] =
   { "resample_mode", config_resample_mode },
   { "sample_volume", config_set_sam_volume },
   { "save_file", config_save_file },
+#ifdef CONFIG_NETWORK
+  { "socks_host", config_set_socks_host },
+  { "socks_port", config_set_socks_port },
+#endif
   { "startup_editor", config_startup_editor },
   { "startup_file", config_startup_file },
   { "system_mouse", config_system_mouse },
@@ -496,6 +513,8 @@ static const struct config_info default_options =
 
 #ifdef CONFIG_NETWORK
   true,                         // network_enabled
+  "",                           // socks_host
+  1080,                         // socks_port
 #endif
 #if defined(CONFIG_UPDATER)
 #if defined(CONFIG_DEBYTECODE)
@@ -529,7 +548,7 @@ __editor_maybe_static void __set_config_from_file(
   char *equals_position, *value;
   FILE *conf_file;
 
-  conf_file = fopen(conf_file_name, "rb");
+  conf_file = fopen_unsafe(conf_file_name, "rb");
   if(!conf_file)
     return;
 

@@ -1181,7 +1181,7 @@ void update_board(struct world *mzx_world)
 
           // Hit player and die
           status = move(mzx_world, x, y, m_dir,
-           MUST_LAVAGOOP | REACT_PLAYER | CAN_LAVAWALK);
+           MUST_LAVAGOOP | REACT_PLAYER | CAN_GOOPWALK | CAN_LAVAWALK);
 
           if(status == HIT_PLAYER)
           {
@@ -2506,16 +2506,14 @@ void shoot_seeker(struct world *mzx_world, int x, int y, int dir)
   struct board *src_board = mzx_world->current_board;
   int dx, dy, d_offset;
   enum thing d_id;
-  char d_param, d_flag;
+  char d_flag;
   char *level_id = src_board->level_id;
-  char *level_param = src_board->level_param;
 
   if(arraydir2(src_board, x, y, &dx, &dy, dir))
     return;
 
   d_offset = xy2array2(src_board, dx, dy);
   d_id = (enum thing)level_id[d_offset];
-  d_param = level_param[d_offset];
   d_flag = flags[(int)d_id];
 
   // If it can be moved under, place it
@@ -2537,16 +2535,14 @@ void shoot_missile(struct world *mzx_world, int x, int y, int dir)
   struct board *src_board = mzx_world->current_board;
   int dx, dy, d_offset;
   enum thing d_id;
-  char d_param, d_flag;
+  char d_flag;
   char *level_id = src_board->level_id;
-  char *level_param = src_board->level_param;
 
   if(arraydir2(src_board, x, y, &dx, &dy, dir))
     return;
 
   d_offset = xy2array2(src_board, dx, dy);
   d_id = (enum thing)level_id[d_offset];
-  d_param = level_param[d_offset];
   d_flag = flags[(int)d_id];
 
   // If it can be moved under, place it

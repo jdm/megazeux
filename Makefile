@@ -6,6 +6,14 @@
 #                  http://aegis.sourceforge.net/auug97.pdf
 ##
 
+#
+# Remove all built-in rules.
+#
+.SUFFIXES:
+ifeq ($(filter -r,$(MAKEFLAGS)),)
+MAKEFLAGS += -r
+endif
+
 .PHONY: clean help_check mzx mzx.debug build build_clean source
 
 -include platform.inc
@@ -165,9 +173,11 @@ source: build/${TARGET}src
 build/${TARGET}src:
 	${RM} -r build/${TARGET}
 	${MKDIR} -p build/dist/source
-	@svn export . build/${TARGET}
+	@git checkout-index -a --prefix build/${TARGET}/
+	${RM} -r build/${TARGET}/scripts
+	${RM} build/${TARGET}/.gitignore build/${TARGET}/.gitattributes
 	@cd build/${TARGET} && make distclean
-	@tar -C build -jcf build/dist/source/${TARGET}src.tar.bz2 ${TARGET}
+	@tar -C build -Jcf build/dist/source/${TARGET}src.tar.xz ${TARGET}
 
 #
 # The SUPPRESS_BUILD hack is required to allow the placebo "dist"
@@ -227,7 +237,7 @@ ${build}:
 	${CP} assets/default.chr assets/edit.chr ${build}/assets
 	${CP} assets/smzx.pal ${build}/assets
 	${CP} docs/COPYING.DOC docs/changelog.txt docs/port.txt ${build}/docs
-	${CP} docs/macro.txt docs/keycodes2.png ${build}/docs
+	${CP} docs/macro.txt docs/keycodes.png ${build}/docs
 	${CP} docs/platform_matrix.html ${build}/docs
 	${CP} ${mzxrun} ${build}
 	@if test -f ${mzxrun}.debug; then \
@@ -261,9 +271,11 @@ ifeq (${BUILD_UTILS},1)
 	${MKDIR} ${build}/utils
 	${CP} ${checkres} ${downver} ${build}/utils
 	${CP} ${hlp2txt} ${txt2hlp} ${build}/utils
+	${CP} ${png2smzx} ${build}/utils
 	@if test -f ${checkres}.debug; then \
 		cp ${checkres}.debug ${downver}.debug ${build}/utils; \
 		cp ${hlp2txt}.debug  ${txt2hlp}.debug ${build}/utils; \
+		cp ${png2smzx}.debug ${build}/utils; \
 	fi
 endif
 ifeq (${BUILD_RENDER_GL_PROGRAM},1)

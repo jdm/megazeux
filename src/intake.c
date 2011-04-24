@@ -71,7 +71,6 @@ int intake(struct world *mzx_world, char *string, int max_len,
   int done = 0, place = 0;
   char cur_char = 0;
   char temp_char;
-  int in_macro;
   int use_mask = mzx_world->conf.mask_midchars;
   int mouse_press;
   int key;
@@ -192,8 +191,6 @@ int intake(struct world *mzx_world, char *string, int max_len,
       return IKEY_UNKNOWN;
     }
 #endif
-
-    in_macro = 0;
 
     // Get key
     if(macro_position != -1)
