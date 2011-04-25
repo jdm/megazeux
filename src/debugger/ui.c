@@ -33,7 +33,7 @@
 void watch_remote_robot(struct world *mzx_world)
 {
   struct breakpoint *bp = &mzx_world->debug_watch.breakpoints;
-  struct robot *cur_robot = mzx_world->debug_watch.watch;
+  struct robot *cur_robot = mzx_world->current_board->robot_list[mzx_world->debug_watch.watch_id];
   FILE *bc_file = fsafeopen(DEBUGGER_BYTECODE, "wb");
   if(bc_file)
   {
@@ -62,21 +62,29 @@ bool watch_robot(struct world *mzx_world)
   struct dialog di;
   struct element *elements[1];
   bool robot_selected = false;
+  struct robot *watched = NULL;
+  struct board *src_board = mzx_world->current_board;
+  if (mzx_world->debug_watch.watch_id >= 0)
+      watched = src_board->robot_list[mzx_world->debug_watch.watch_id];
   
   m_show();
   
   for(i = 0; i < num_robots; i++)
   {
     robot_list[i] = calloc(16, 1);
-    cp_len = strlen(mzx_world->current_board->robot_list[i]->robot_name);
-    if(mzx_world->debug_watch.watch)
+    if (!src_board->robot_list[i]) {
+        memset(robot_list[i], ' ', 15);
+        continue;
+    }
+    cp_len = strlen(src_board->robot_list[i]->robot_name);
+    if(watched)
     {
-      if(!strcmp(mzx_world->current_board->robot_list[i]->robot_name,
-                 mzx_world->debug_watch.watch->robot_name))
+      if(!strcmp(src_board->robot_list[i]->robot_name,
+                 watched->robot_name))
         selected = i;
     }
     memset(robot_list[i], ' ', 15);
-    memcpy(robot_list[i], mzx_world->current_board->robot_list[i]->robot_name, cp_len);
+    memcpy(robot_list[i], src_board->robot_list[i]->robot_name, cp_len);
   }
   
   do
@@ -90,12 +98,13 @@ bool watch_robot(struct world *mzx_world)
     dialog_result = run_dialog(mzx_world, &di);
     if(dialog_result == 0)
     {
-      struct robot *cur_robot = mzx_world->current_board->robot_list[selected];
-      mzx_world->debug_watch.watch = cur_robot;
-      watch_remote_robot(mzx_world);
+      if (mzx_world->current_board->robot_list[selected]) {
+        mzx_world->debug_watch.watch_id = selected;
+        watch_remote_robot(mzx_world);
 
-      dialog_result = -1;
-      robot_selected = true;
+        dialog_result = -1;
+        robot_selected = true;
+      }
     }
     destruct_dialog(&di);
   } while(dialog_result != -1);

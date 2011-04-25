@@ -2799,6 +2799,7 @@ static void display_robot_line(struct robot_state *rstate,
     }
     else
     {
+#ifdef CONFIG_DEBUGGER
       if(rstate->mzx_world->debugging)
       {
         //FIXME this linear search is inefficient for large programs
@@ -2806,6 +2807,7 @@ static void display_robot_line(struct robot_state *rstate,
         int offset = 2; // FIXME Why is this 2?
         struct robot_line *temp = rstate->base;
         struct breakpoint *bp = &rstate->mzx_world->debug_watch.breakpoints;
+        struct robot *watched = &rstate->mzx_world->global_robot; //FIXME this is hardcoded in too many locations
         while(temp != current_rline)
         {
           offset += temp->line_bytecode_length;
@@ -2829,7 +2831,7 @@ static void display_robot_line(struct robot_state *rstate,
                             y, current_color, 0);
           return;
         }
-        else if(rstate->mzx_world->debug_watch.watch->cur_prog_line == offset)
+        else if(watched->cur_prog_line == offset)
         {
           //FIXME magic number 18
           current_color = combine_colors(color_codes[18], bg_color);
@@ -2839,6 +2841,7 @@ static void display_robot_line(struct robot_state *rstate,
           return;
         }
       }
+#endif
 
       use_mask = 0;
       arg_length = 0;

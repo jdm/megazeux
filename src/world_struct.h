@@ -207,7 +207,7 @@ struct world
   } debugging;
   struct
   {
-    struct robot *watch;
+    int watch_id; // -1 is no watch
     struct breakpoint breakpoints;
     int commands_executed;
   } debug_watch;

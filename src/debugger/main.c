@@ -131,7 +131,7 @@ static bool process_message(char *message, struct world *mzx_world,
             _info("setting current line to %d\n", line_number);
 
             clear_breakpoints(mzx_world);
-            mzx_world->debug_watch.watch = robot;
+            //mzx_world->debug_watch.watch = robot; //XXX not needed if we hardcode global robot
             break;
         }
 

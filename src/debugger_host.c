@@ -87,7 +87,7 @@ static bool process_message(char *message, struct world *mzx_world)
       break;
     case TOGGLE_BREAKPOINT:
     {
-      struct robot *watch = mzx_world->debug_watch.watch;
+      struct robot *watch = mzx_world->current_board->robot_list[mzx_world->debug_watch.watch_id];
       int line = get_message_arg(message, 0);
       int offset = line_number_to_offset(watch, line);
       info("instructed to toggle breakpoint at line %d (offset %d)\n", line, offset);

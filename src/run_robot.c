@@ -307,10 +307,11 @@ int place_player_xy(struct world *mzx_world, int x, int y)
   return 0;
 }
 
-static void set_robot_coords(struct world *mzx_world, struct robot *robot, int x, int y)
+static void set_robot_coords(struct world *mzx_world, int id, int x, int y)
 {
+    struct robot *robot = mzx_world->current_board->robot_list[id];
 #ifdef CONFIG_DEBUGGER
-    if (mzx_world->debugging && mzx_world->debug_watch.watch == robot)
+    if (mzx_world->debugging && mzx_world->debug_watch.watch_id == id)
         debugger_send(UPDATE_COORDS, x, y);
 #endif
     robot->xpos = x;
@@ -903,11 +904,11 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   {
     if(mzx_world->debugging == STOPPED)
       return;
-    else if(mzx_world->debugging == STEPPING_OTHERS
-         && mzx_world->debug_watch.watch == src_board->robot_list[id < 0 ? -id : id])
+    else if(mzx_world->debugging == STEPPING_OTHERS &&
+            mzx_world->debug_watch.watch_id == (id < 0 ? -id : id))
       mzx_world->debugging = STEPPING;
-    else if(mzx_world->debugging == STEPPING
-         && mzx_world->debug_watch.watch != src_board->robot_list[id < 0 ? -id : id])
+    else if(mzx_world->debugging == STEPPING &&
+            mzx_world->debug_watch.watch_id != (id < 0 ? -id : id))
       return;
   }
 #endif
@@ -921,10 +922,10 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   {
     id = -id;
     cur_robot = src_board->robot_list[id];
-    set_robot_coords(mzx_world, cur_robot, x, y);
+    set_robot_coords(mzx_world, id, x, y);
     cur_robot->cycle_count = 0;
 
-    src_board->robot_list[id]->status = 0;
+    cur_robot->status = 0;
   }
   else
   {
@@ -934,7 +935,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
     walk_dir = cur_robot->walk_dir;
 
     // Reset x/y
-    set_robot_coords(mzx_world, cur_robot, x, y);
+    set_robot_coords(mzx_world, id, x, y);
     // Update cycle count
 
     cur_robot->cycle_count++;
@@ -1018,7 +1019,8 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   find_player(mzx_world);
 
 #ifdef CONFIG_DEBUGGER
-  if(mzx_world->debugging && cur_robot == mzx_world->debug_watch.watch)
+  if(mzx_world->debugging &&
+     cur_robot == src_board->robot_list[mzx_world->debug_watch.watch_id])
   {
     if(mzx_world->debug_watch.commands_executed == -1)
       mzx_world->debug_watch.commands_executed = 0;
@@ -2473,7 +2475,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
             cur_robot->cur_prog_line = 0;
 
           cur_robot->cycle_count = 0;
-          set_robot_coords(mzx_world, cur_robot, x, y);
+          set_robot_coords(mzx_world, id, x, y);
 
           // Move player
           move_player(mzx_world, dir_to_int(direction));
@@ -5892,7 +5894,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
     {
       struct breakpoint *bp;
 
-      if(cur_robot == mzx_world->debug_watch.watch)
+      if(cur_robot == src_board->robot_list[mzx_world->debug_watch.watch_id])
         debugger_send(CURRENT_LINE, cur_robot->cur_prog_line);
 
       for(bp = &mzx_world->debug_watch.breakpoints; bp; bp = bp->next)
@@ -5900,7 +5902,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         if(bp->target != cur_robot || bp->pos != cur_robot->cur_prog_line)
           continue;
         
-        mzx_world->debug_watch.watch = cur_robot;
+        mzx_world->debug_watch.watch_id = id;
         if(mzx_world->debugging == RUNNING
         || mzx_world->debugging == STEPPING_OTHERS)
         {
@@ -5911,7 +5913,8 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
       }
     }
 
-    if(mzx_world->debugging == STEPPING && cur_robot == mzx_world->debug_watch.watch)
+    if(mzx_world->debugging == STEPPING &&
+       cur_robot == src_board->robot_list[mzx_world->debug_watch.watch_id])
     {
       mzx_world->debugging = STOPPED;
       mzx_world->debug_watch.commands_executed += lines_run + 1;
@@ -5930,8 +5933,9 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
 #ifdef CONFIG_DEBUGGER
   // Ended a cycle early
-  if(mzx_world->debugging && cur_robot == mzx_world->debug_watch.watch
-  && (mzx_world->debug_watch.commands_executed < mzx_world->commands || done))
+  if(mzx_world->debugging &&
+     cur_robot == src_board->robot_list[mzx_world->debug_watch.watch_id] &&
+     (mzx_world->debug_watch.commands_executed < mzx_world->commands || done))
   {
     mzx_world->debug_watch.commands_executed = -1;
     if(mzx_world->debugging == STEPPING)
@@ -5943,6 +5947,6 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
   cur_robot->cycle_count = 0; // In case a label changed it
   // Reset x/y (from movements)
-  set_robot_coords(mzx_world, cur_robot, x, y);
+  set_robot_coords(mzx_world, id, x, y);
 }
 

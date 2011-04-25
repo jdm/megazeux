@@ -1635,7 +1635,7 @@ __editor_maybe_static void default_global_data(struct world *mzx_world)
 
 #ifdef CONFIG_DEBUGGER
   mzx_world->debugging = false;
-  mzx_world->debug_watch.watch = NULL;
+  mzx_world->debug_watch.watch_id = -1;
   mzx_world->debug_watch.breakpoints.target = NULL;
   mzx_world->debug_watch.breakpoints.next = NULL;
 #endif

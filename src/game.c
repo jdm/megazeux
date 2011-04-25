@@ -1958,7 +1958,7 @@ __editor_maybe_static void play_game(struct world *mzx_world)
               mzx_world->debugging = NOT_DEBUGGING;
             else mzx_world->debugging = STOPPED;
 
-            mzx_world->debug_watch.watch = NULL;
+            mzx_world->debug_watch.watch_id = -1;
             if(mzx_world->debugging)
             {
               if(!watch_robot(mzx_world))
