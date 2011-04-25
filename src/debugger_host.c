@@ -56,11 +56,16 @@ static int line_number_to_offset(struct robot *robot, int line_num)
   return cur_offset;
 }
 
-bool process_message(struct debugger_message *message, struct world *mzx_world);
-
-bool process_message(struct debugger_message *message, struct world *mzx_world)
+static int get_message_arg(char *message, int arg)
 {
-  switch(message->type)
+    int val;
+    memcpy(&val, message + 1 + sizeof(val) * arg, sizeof(val));
+    return val;
+}
+
+static bool process_message(char *message, struct world *mzx_world)
+{
+  switch(message[0])
   {
     case STEP:
       if(mzx_world->debugging == STOPPED)
@@ -83,8 +88,9 @@ bool process_message(struct debugger_message *message, struct world *mzx_world)
     case TOGGLE_BREAKPOINT:
     {
       struct robot *watch = mzx_world->debug_watch.watch;
-      int offset = line_number_to_offset(watch, message->param);
-      info("instructed to toggle breakpoint at line %d (offset %d)\n", message->param, offset);
+      int line = get_message_arg(message, 0);
+      int offset = line_number_to_offset(watch, line);
+      info("instructed to toggle breakpoint at line %d (offset %d)\n", line, offset);
       toggle_breakpoint(mzx_world, watch, offset);
       break;
     }
@@ -102,18 +108,21 @@ bool process_message(struct debugger_message *message, struct world *mzx_world)
       return false;
 
     default:
-      warn("unknown message (%d) received from debugger\n", message->type);
+      warn("unknown message (%d) received from debugger\n", message[0]);
       return false;
   }
   return true;
 }
 
-void debugger_send(enum message_type type, param_type param)
+void debugger_send(enum message_type type, ...)
 {
+    va_list args;
+    va_start(args, type);
   if(child)
-    send_message(child, type, param);
+    send_message(child, type, args);
   else
-    warn("Tried to send message (%d,%d) to non-existent child\n", type, param);
+    warn("Tried to send message (%d) to non-existent child\n", type);
+  va_end(args);
 }
 
 bool debugger_start(struct world *mzx_world)
@@ -184,13 +193,19 @@ bool debugger_run(struct world *mzx_world)
   }
   else if(status > 0)
   {
-    char buffer[sizeof(struct debugger_message)];
-    if(!host_recv_raw(child, buffer, sizeof(buffer) / sizeof(buffer[0])))
+    char type, *buffer;
+    bool rv;
+    if (!host_recv_raw(child, &type, 1) ||
+        !(buffer = malloc(message_size((enum message_type)type))) ||
+        !host_recv_raw(child, buffer + 1, message_size((enum message_type)type) - 1))
     {
       warn("Receive error\n");
       return false;
-    } 
-    return process_message((struct debugger_message *)&buffer, mzx_world);
+    }
+    buffer[0] = type;
+    rv = process_message(buffer, mzx_world);
+    free(buffer);
+    return rv;
   }
   return true;
 }
@@ -199,7 +214,7 @@ void debugger_end(struct world *mzx_world)
 {
   if(child)
   {
-    send_message(child, STOP_PROCESS, -1);
+    debugger_send(STOP_PROCESS, -1);
     host_destroy(child);
     child = NULL;
   }

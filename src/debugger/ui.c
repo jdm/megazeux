@@ -48,6 +48,7 @@ void watch_remote_robot(struct world *mzx_world)
       debugger_send(TOGGLE_BREAKPOINT, bp->pos);
     bp = bp->next;
   }
+  debugger_send(UPDATE_COORDS, cur_robot->xpos, cur_robot->ypos);
 }
 
 bool watch_robot(struct world *mzx_world)

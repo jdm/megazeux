@@ -307,6 +307,16 @@ int place_player_xy(struct world *mzx_world, int x, int y)
   return 0;
 }
 
+static void set_robot_coords(struct world *mzx_world, struct robot *robot, int x, int y)
+{
+#ifdef CONFIG_DEBUGGER
+    if (mzx_world->debugging && mzx_world->debug_watch.watch == robot)
+        debugger_send(UPDATE_COORDS, x, y);
+#endif
+    robot->xpos = x;
+    robot->ypos = y;
+}
+
 static void send_at_xy(struct world *mzx_world, int id, int x, int y,
  char *label)
 {
@@ -651,9 +661,11 @@ __editor_maybe_static void copy_board_buffer_to_board(struct board *src_board,
 
         if(is_robot(src_id_cur))
         {
+            //XXXjdm I think it's safe to assume we're not watching
+            //       the robot in question?
           int idx = src_param[src_offset];
-          (src_board->robot_list[idx])->xpos = x + i2;
-          (src_board->robot_list[idx])->ypos = y + i;
+          src_board->robot_list[idx]->xpos = x + i2;
+          src_board->robot_list[idx]->ypos = y + i;
         }
 
         if(src_id_cur != PLAYER)
@@ -909,8 +921,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
   {
     id = -id;
     cur_robot = src_board->robot_list[id];
-    cur_robot->xpos = x;
-    cur_robot->ypos = y;
+    set_robot_coords(mzx_world, cur_robot, x, y);
     cur_robot->cycle_count = 0;
 
     src_board->robot_list[id]->status = 0;
@@ -923,8 +934,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
     walk_dir = cur_robot->walk_dir;
 
     // Reset x/y
-    cur_robot->xpos = x;
-    cur_robot->ypos = y;
+    set_robot_coords(mzx_world, cur_robot, x, y);
     // Update cycle count
 
     cur_robot->cycle_count++;
@@ -2463,8 +2473,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
             cur_robot->cur_prog_line = 0;
 
           cur_robot->cycle_count = 0;
-          cur_robot->xpos = x;
-          cur_robot->ypos = y;
+          set_robot_coords(mzx_world, cur_robot, x, y);
 
           // Move player
           move_player(mzx_world, dir_to_int(direction));
@@ -5934,7 +5943,6 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 
   cur_robot->cycle_count = 0; // In case a label changed it
   // Reset x/y (from movements)
-  cur_robot->xpos = x;
-  cur_robot->ypos = y;
+  set_robot_coords(mzx_world, cur_robot, x, y);
 }
 

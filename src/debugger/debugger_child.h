@@ -30,7 +30,7 @@ __M_BEGIN_DECLS
 struct host;
 extern struct host *parent;
 
-EDITOR_LIBSPEC void debugger_host_send(enum message_type type, param_type param);
+EDITOR_LIBSPEC void debugger_host_send(enum message_type type, ...);
 
 __M_END_DECLS
 

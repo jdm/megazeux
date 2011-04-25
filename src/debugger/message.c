@@ -19,23 +19,70 @@
 
 // Debugger message code
 
+#include <stdarg.h>
+#include <stdlib.h>
 #include "debugger.h"
 #include "debugger/debugger_child.h"
 #include "network/host.h"
 #include "util.h"
 
-void send_message(struct host *h, enum message_type type, param_type param)
+static unsigned int message_args(enum message_type type)
 {
-  struct debugger_message message = {
-    .type = (char)type,
-    .param = param
-  };
-
-  if(!host_send_raw(h, (const char *)&message, sizeof(message)))
-    warn("Error sending message (%d,%d)\n", type, param);
+    switch (type) {
+        case STEP:
+        case CONTINUE:
+        case BREAK:
+        case STOP_PROCESS:
+        case SWITCH_WATCH:
+            return 0;
+        case RELOAD_PROGRAM:
+        case CURRENT_LINE:
+        case TOGGLE_BREAKPOINT:
+            return 1;
+        case UPDATE_COORDS:
+            return 2;
+        default:
+            return -1;
+    }
 }
 
-void debugger_host_send(enum message_type type, param_type param)
+unsigned int message_size(enum message_type type)
 {
-  send_message(parent, type, param);
+    return 1 + message_args(type) * sizeof(int);
+}
+
+static void _send_message(struct host *h,
+                          enum message_type type,
+                          va_list args)
+{
+    char *message;
+    unsigned int i, size;
+    int arg;
+    size = message_size(type);
+    message = malloc(size);
+    if (!message)
+        warn("Error allocating buffer\n");
+    message[0] = (char)type;
+    i = 0;
+    while(i < message_args(type)) {
+        arg = va_arg(args, int);
+        memcpy(message + 1 + sizeof(int) * i, &arg, sizeof(arg));
+        i++;
+    }
+    if (!host_send_raw(h, message, size))
+        warn("Error sending message (%d)\n", type);
+    free(message);
+}
+
+void send_message(struct host *h, enum message_type type, va_list args)
+{
+    _send_message(h, type, args);
+}
+
+void debugger_host_send(enum message_type type, ...)
+{
+    va_list args;
+    va_start(args, type);
+    _send_message(parent, type, args);
+    va_end(args);
 }

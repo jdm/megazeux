@@ -77,7 +77,7 @@
 
 static bool process_network_input(struct host *parent, struct world *mzx_world,
                                   struct robot *robot);
-static bool process_message(struct debugger_message *message, struct world *mzx_world,
+static bool process_message(char *message, struct world *mzx_world,
                             struct robot *robot);
 
 struct host *parent;
@@ -97,17 +97,25 @@ static int offset_to_line_number(struct robot *robot, int offset)
     return current_line_num;
 }
 
-static bool process_message(struct debugger_message *message, struct world *mzx_world,
+static int get_message_arg(char *message, int arg)
+{
+    int val;
+    memcpy(&val, message + 1 + sizeof(val) * arg, sizeof(val));
+    return val;
+}
+
+static bool process_message(char *message, struct world *mzx_world,
                             struct robot *robot)
 {
-    switch(message->type)
+    switch(message[0])
     {
         case RELOAD_PROGRAM:
         {
             FILE *fp = fsafeopen(DEBUGGER_BYTECODE, "rb");
-            int size;
+            int size, offset;
 
-            _info("reloading program at offset %d\n", message->param);
+            offset = get_message_arg(message, 0);
+            _info("reloading program at offset %d\n", offset);
             if(!fp) {
                 _warn("bytecode file missing\n");
                 return false;
@@ -117,8 +125,9 @@ static bool process_message(struct debugger_message *message, struct world *mzx_
             fread(robot->program_bytecode, size, 1, fp);
             fclose(fp);
 
-            robot->cur_prog_line = message->param;
-            line_number = offset_to_line_number(robot, message->param);
+            offset = get_message_arg(message, 0);
+            robot->cur_prog_line = offset;
+            line_number = offset_to_line_number(robot, offset);
             _info("setting current line to %d\n", line_number);
 
             clear_breakpoints(mzx_world);
@@ -128,19 +137,30 @@ static bool process_message(struct debugger_message *message, struct world *mzx_
 
         case CURRENT_LINE:
         {
-            _info("setting current offset to %d\n", message->param);
+            int offset = get_message_arg(message, 0);
+            _info("setting current offset to %d\n", offset);
             if(follow_active_line)
-               line_number = offset_to_line_number(robot, message->param);
-            robot->cur_prog_line = message->param;
+               line_number = offset_to_line_number(robot, offset);
+            robot->cur_prog_line = offset;
             _info("setting current line to %d\n", line_number);
             break;
         }
 
         case TOGGLE_BREAKPOINT:
         {
-            int line = offset_to_line_number(robot, message->param);
-            _info("setting breakpoint at %d (offset %d)\n", line, message->param);
+            int offset = get_message_arg(message, 0);
+            int line = offset_to_line_number(robot, offset);
+            _info("setting breakpoint at %d (offset %d)\n", line, offset);
             toggle_breakpoint(mzx_world, robot, line);
+            break;
+        }
+
+        case UPDATE_COORDS:
+        {
+            int x = get_message_arg(message, 0);
+            int y = get_message_arg(message, 1);
+            robot->xpos = x;
+            robot->ypos = y;
             break;
         }
 
@@ -156,7 +176,7 @@ static bool process_message(struct debugger_message *message, struct world *mzx_
             return false;
 
         default:
-            _warn("Nonsense message type (%d) received.\n", message->type);
+            _warn("Nonsense message type (%d) received.\n", message[0]);
             return false;
     }
     return true;
@@ -174,13 +194,20 @@ static bool process_network_input(struct host *parent, struct world *mzx_world,
     }
     else if(status > 0)
     {
-        char buffer[sizeof(struct debugger_message)];
-        if(!host_recv_raw(parent, buffer, sizeof(buffer) / sizeof(buffer[0])))
+        char type;
+        char *buffer;
+        bool rv;
+        if (!host_recv_raw(parent, &type, 1) ||
+            !(buffer = malloc(message_size((enum message_type)type))) ||
+            !host_recv_raw(parent, buffer + 1, message_size((enum message_type)type) - 1))
         {
             _warn("Receive error\n");
             return false;
-        }    
-        return process_message((struct debugger_message *)&buffer, mzx_world, robot);
+        }
+        buffer[0] = type;
+        rv = process_message(buffer, mzx_world, robot);
+        free(buffer);
+        return rv;
     }
     return true;
 }
@@ -326,7 +353,7 @@ __libspec int main(int argc, char *argv[])
     err = 0;
 err_destroy_host_exit:
     if(parent)
-        send_message(parent, STOP_PROCESS, -1);
+        debugger_host_send(STOP_PROCESS, -1);
 
     host_destroy(parent);
     //err_network_layer_exit:

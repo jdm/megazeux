@@ -23,6 +23,7 @@
 #define __DEBUGGER_H
 
 #include "compat.h"
+#include <stdarg.h>
 
 __M_BEGIN_DECLS
 
@@ -32,30 +33,24 @@ __M_BEGIN_DECLS
 #define DEBUGGER_APP "./mzxdbg"
 #define DEBUGGER_BYTECODE "_debugger.active.bc"
 
-typedef int param_type;
-
-struct debugger_message
-{
-  char type;
-  param_type param;
-};
-
 enum message_type
 {
-  RELOAD_PROGRAM,    // param: bytecode program offset
-  CURRENT_LINE,      // param: bytecode program offset
-  STEP,              // param: none
-  CONTINUE,          // param: none
-  BREAK,             // param: none
-  STOP_PROCESS,      // param: none
-  TOGGLE_BREAKPOINT, // param: line number
-  SWITCH_WATCH       // param: none
+  RELOAD_PROGRAM,    // offset
+  CURRENT_LINE,      // offset
+  STEP,              //
+  CONTINUE,          //
+  BREAK,             //
+  STOP_PROCESS,      //
+  TOGGLE_BREAKPOINT, // line
+  SWITCH_WATCH,      //
+  UPDATE_COORDS      // x, y
 };
 
 struct host;
 
-void send_message(struct host *h, enum message_type type, param_type param);
-void debugger_host_send(enum message_type type, param_type param);
+void send_message(struct host *h, enum message_type type, va_list args);
+void debugger_host_send(enum message_type type, ...);
+unsigned int message_size(enum message_type);
 
 #endif // CONFIG_DEBUGGER
 

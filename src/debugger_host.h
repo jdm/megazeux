@@ -30,7 +30,7 @@ __M_BEGIN_DECLS
 CORE_LIBSPEC bool debugger_start(struct world *mzx_world);
 CORE_LIBSPEC void debugger_end(struct world *mzx_world);
 CORE_LIBSPEC bool debugger_run(struct world *mzx_world);
-CORE_LIBSPEC void debugger_send(enum message_type type, param_type param);
+CORE_LIBSPEC void debugger_send(enum message_type type, ...);
 
 __M_END_DECLS
 
