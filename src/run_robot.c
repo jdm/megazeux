@@ -309,13 +309,13 @@ int place_player_xy(struct world *mzx_world, int x, int y)
 
 static void set_robot_coords(struct world *mzx_world, int id, int x, int y)
 {
-    struct robot *robot = mzx_world->current_board->robot_list[id];
+  struct robot *robot = mzx_world->current_board->robot_list[id];
 #ifdef CONFIG_DEBUGGER
-    if (mzx_world->debugging && mzx_world->debug_watch.watch_id == id)
-        debugger_send(UPDATE_COORDS, x, y);
+  if (mzx_world->debugging && mzx_world->debug_watch.watch_id == id)
+    debugger_send(UPDATE_COORDS, x, y);
 #endif
-    robot->xpos = x;
-    robot->ypos = y;
+  robot->xpos = x;
+  robot->ypos = y;
 }
 
 static void send_at_xy(struct world *mzx_world, int id, int x, int y,
@@ -662,8 +662,8 @@ __editor_maybe_static void copy_board_buffer_to_board(struct board *src_board,
 
         if(is_robot(src_id_cur))
         {
-            //XXXjdm I think it's safe to assume we're not watching
-            //       the robot in question?
+          //XXXjdm I think it's safe to assume we're not watching
+          //       the robot in question?
           int idx = src_param[src_offset];
           src_board->robot_list[idx]->xpos = x + i2;
           src_board->robot_list[idx]->ypos = y + i;
