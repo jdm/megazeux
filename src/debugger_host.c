@@ -223,6 +223,7 @@ void debugger_end(struct world *mzx_world)
   host_layer_exit();
 
   clear_breakpoints(mzx_world);
+  mzx_world->debugging = NOT_DEBUGGING;
 }
 
 static bool debugger_launch()

@@ -5457,6 +5457,11 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         char *translated_name = cmalloc(MAX_PATH);
         int redo_load;
 
+#ifdef CONFIG_DEBUGGER
+        if (mzx_world->debugging)
+          debugger_end(mzx_world); // Bail.
+#endif
+
         tr_msg(mzx_world, cmd_ptr + 2, id, name_buffer);
 
         // Couldn't find world to swap to; abort cleanly

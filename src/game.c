@@ -1537,6 +1537,12 @@ static int update(struct world *mzx_world, int game, int *fadein)
     int saved_player_last_dir = src_board->player_last_dir;
     int target_board = mzx_world->target_board;
 
+#ifdef CONFIG_DEBUGGER
+    // We can't deal with changing boards right now, so bail.
+    if (mzx_world->debugging)
+      debugger_end(mzx_world);
+#endif
+
     // Aha.. TELEPORT or ENTRANCE.
     // Destroy message, bullets, spitfire?
 

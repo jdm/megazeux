@@ -43,6 +43,10 @@
 #include "world.h"
 #include "util.h"
 
+#ifdef CONFIG_DEBUGGER
+#include "debugger/ui.h"
+#endif
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -2504,6 +2508,15 @@ int set_counter_special(struct world *mzx_world, char *char_value,
           cur_robot->label_list =
            cache_robot_labels(cur_robot, &cur_robot->num_labels);
 
+#ifdef CONFIG_DEBUGGER
+          if(mzx_world->debugging &&
+             mzx_world->debug_watch.watch_id >= 0 &&
+             mzx_world->current_board->robot_list[mzx_world->debug_watch.watch_id] == cur_robot)
+          {
+            watch_remote_robot(mzx_world);
+          }
+#endif
+
           // Restart this robot if either it was just a LOAD_ROBOT
           // OR LOAD_ROBOTn was used where n is &robot_id&.
           if(value == -1 || value == id)
@@ -2540,6 +2553,15 @@ int set_counter_special(struct world *mzx_world, char *char_value,
           cur_robot->stack_pointer = 0;
           cur_robot->label_list =
            cache_robot_labels(cur_robot, &cur_robot->num_labels);
+
+#ifdef CONFIG_DEBUGGER
+          if(mzx_world->debugging &&
+             mzx_world->debug_watch.watch_id >= 0 &&
+             mzx_world->current_board->robot_list[mzx_world->debug_watch.watch_id] == cur_robot)
+          {
+            watch_remote_robot(mzx_world);
+          }
+#endif
 
           // Restart this robot if either it was just a LOAD_BC
           // OR LOAD_BCn was used where n is &robot_id&.
