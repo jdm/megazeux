@@ -186,6 +186,10 @@ static bool process_message(char *message, struct world *mzx_world,
 static bool process_network_input(struct host *parent, struct world *mzx_world,
                                   struct robot *robot)
 {
+  char buffer[80];
+  int i = 10;
+  while (i--)
+  {
     int status;
     status = host_poll_raw(parent, 10);
     if(status < 0)
@@ -195,22 +199,19 @@ static bool process_network_input(struct host *parent, struct world *mzx_world,
     }
     else if(status > 0)
     {
-        char type;
-        char *buffer;
         bool rv;
-        if (!host_recv_raw(parent, &type, 1) ||
-            !(buffer = malloc(message_size((enum message_type)type))) ||
-            !host_recv_raw(parent, buffer + 1, message_size((enum message_type)type) - 1))
+        if (!host_recv_raw(parent, buffer, 1) ||
+            !host_recv_raw(parent, buffer + 1, message_size((enum message_type)buffer[0]) - 1))
         {
             _warn("Receive error\n");
             return false;
         }
-        buffer[0] = type;
-        rv = process_message(buffer, mzx_world, robot);
-        free(buffer);
-        return rv;
+        if (!process_message(buffer, mzx_world, robot))
+          return false;
     }
-    return true;
+    else return true;
+  }
+  return true;
 }
 
 __libspec int main(int argc, char *argv[])
@@ -290,6 +291,8 @@ __libspec int main(int argc, char *argv[])
         _warn("Error connecting to parent app\n");
         goto err_destroy_host_exit;
     }
+
+    host_blocking(parent, false);
 
     init_event();
 
