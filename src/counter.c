@@ -45,6 +45,8 @@
 
 #ifdef CONFIG_DEBUGGER
 #include "debugger/ui.h"
+#include "debugger_host.h"
+#include "debugger/breakpoint.h"
 #endif
 
 #ifndef M_PI
@@ -2994,6 +2996,11 @@ void set_counter(struct world *mzx_world, const char *name, int value, int id)
   }
   else
   {
+#ifdef CONFIG_DEBUGGER
+    if (mzx_world->debugging && watchpoint_exists(mzx_world, name))
+      debugger_watch(mzx_world, id);
+#endif
+
     cdest = find_counter(mzx_world, name, &next);
 
     if(cdest)

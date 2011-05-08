@@ -31,6 +31,7 @@ CORE_LIBSPEC bool debugger_start(struct world *mzx_world);
 CORE_LIBSPEC void debugger_end(struct world *mzx_world);
 CORE_LIBSPEC bool debugger_run(struct world *mzx_world);
 CORE_LIBSPEC void debugger_send(enum message_type type, ...);
+CORE_LIBSPEC void debugger_watch(struct world *mzx_world, int id);
 
 __M_END_DECLS
 

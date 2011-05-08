@@ -154,7 +154,7 @@ void foreach_breakpoint(struct world *mzx_world, struct robot *cur_robot, enumer
   list_enumerate(mzx_world->debug_watch.breakpoints, func, &bp);
 }
 
-void toggle_watchpoint(struct world *mzx_world, struct counter *counter)
+void toggle_watchpoint(struct world *mzx_world, const char *counter)
 {
   struct watchpoint wp = { counter };
   list_add_or_remove(mzx_world->debug_watch.watchpoints, &wp);
@@ -170,14 +170,13 @@ void init_watchpoints(struct world *mzx_world)
   list_init(&mzx_world->debug_watch.watchpoints, &watchpoint_ops);
 }
 
-bool watchpoint_exists(struct world *mzx_world,
-                       struct counter *counter)
+bool watchpoint_exists(struct world *mzx_world, const char *counter)
 {
   struct watchpoint wp = { counter };
   return list_elem_exists(mzx_world->debug_watch.watchpoints, &wp);
 }
 
-void foreach_watchpoint(struct world *mzx_world, struct counter *counter, enumerate_func func)
+void foreach_watchpoint(struct world *mzx_world, const char *counter, enumerate_func func)
 {
   struct watchpoint wp = { counter };
   list_enumerate(mzx_world->debug_watch.watchpoints, func, &wp);

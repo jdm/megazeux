@@ -226,6 +226,17 @@ void debugger_end(struct world *mzx_world)
   mzx_world->debugging = NOT_DEBUGGING;
 }
 
+void debugger_watch(struct world *mzx_world, int id)
+{
+  mzx_world->debug_watch.watch_id = id;
+  if (mzx_world->debugging == RUNNING ||
+      mzx_world->debugging == STEPPING_OTHERS)
+  {
+    mzx_world->debugging = STOPPED;
+    watch_remote_robot(mzx_world);
+  }
+}
+
 static bool debugger_launch()
 {
   bool ret;

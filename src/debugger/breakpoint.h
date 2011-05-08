@@ -37,7 +37,7 @@ struct breakpoint
 
 struct watchpoint
 {
-  struct counter *target;
+  const char *target;
 };
 
 void init_breakpoints(struct world *mzx_world);
@@ -47,10 +47,10 @@ bool breakpoint_exists(struct world *mzx_world, struct robot *cur_robot, int pos
 void foreach_breakpoint(struct world *mzx_world, struct robot *cur_robot, enumerate_func func);
 
 void init_watchpoints(struct world *mzx_world);
-void toggle_watchpoint(struct world *mzx_world, struct counter *counter);
+void toggle_watchpoint(struct world *mzx_world, const char *name);
 void clear_watchpoints(struct world *mzx_world);
-bool watchpoint_exists(struct world *mzx_world, struct counter *counter);
-void foreach_watchpoint(struct world *mzx_world, struct counter *counter, enumerate_func func);
+bool watchpoint_exists(struct world *mzx_world, const char *name);
+void foreach_watchpoint(struct world *mzx_world, const char *name, enumerate_func func);
 
 __M_END_DECLS
 

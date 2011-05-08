@@ -5902,16 +5902,7 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
         debugger_send(CURRENT_LINE, cur_robot->cur_prog_line);
 
       if(breakpoint_exists(mzx_world, cur_robot, cur_robot->cur_prog_line))
-      {
-        mzx_world->debug_watch.watch_id = id;
-        if(mzx_world->debugging == RUNNING ||
-           mzx_world->debugging == STEPPING_OTHERS)
-        {
-          mzx_world->debugging = STOPPED;
-          watch_remote_robot(mzx_world);
-          return;
-        }
-      }
+        debugger_watch(mzx_world, id);
     }
 
     if(mzx_world->debugging == STEPPING &&
