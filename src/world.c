@@ -50,6 +50,10 @@
 #include "extmem.h"
 #include "util.h"
 
+#ifdef CONFIG_DEBUGGER
+#include "debugger/breakpoint.h"
+#endif
+
 static const char magic_code[16] =
  "\xE6\x52\xEB\xF2\x6D\x4D\x4A\xB7\x87\xB2\x92\x88\xDE\x91\x24";
 
@@ -1636,8 +1640,8 @@ __editor_maybe_static void default_global_data(struct world *mzx_world)
 #ifdef CONFIG_DEBUGGER
   mzx_world->debugging = false;
   mzx_world->debug_watch.watch_id = -1;
-  mzx_world->debug_watch.breakpoints.target = NULL;
-  mzx_world->debug_watch.breakpoints.next = NULL;
+  init_breakpoints(mzx_world);
+  init_watchpoints(mzx_world);
 #endif
 }
 

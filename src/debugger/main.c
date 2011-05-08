@@ -52,6 +52,7 @@
 
 #include "debugger/debugger.h"
 #include "debugger/debugger_child.h"
+#include "debugger/breakpoint.h"
 #include "fsafeopen.h"
 #include "editor/robo_ed.h"
 #include "editor/world.h"

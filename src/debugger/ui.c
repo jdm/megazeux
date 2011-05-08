@@ -30,9 +30,18 @@
 
 #ifdef CONFIG_DEBUGGER
 
+#include "debugger/breakpoint.h"
+
+static void breakpoint_toggle(void *elem, void *data)
+{
+  struct breakpoint *bp1 = (struct breakpoint *)elem;
+  struct breakpoint *bp2 = (struct breakpoint *)data;
+  if (bp1->target == bp2->target)
+    debugger_send(TOGGLE_BREAKPOINT, bp1->pos);
+}
+
 void watch_remote_robot(struct world *mzx_world)
 {
-  struct breakpoint *bp = &mzx_world->debug_watch.breakpoints;
   struct robot *cur_robot = mzx_world->current_board->robot_list[mzx_world->debug_watch.watch_id];
   FILE *bc_file = fsafeopen(DEBUGGER_BYTECODE, "wb");
   if(bc_file)
@@ -42,12 +51,7 @@ void watch_remote_robot(struct world *mzx_world)
   }
 
   debugger_send(RELOAD_PROGRAM, cur_robot->cur_prog_line);
-  while(bp)
-  {
-    if(bp->target == cur_robot)
-      debugger_send(TOGGLE_BREAKPOINT, bp->pos);
-    bp = bp->next;
-  }
+  foreach_breakpoint(mzx_world, cur_robot, breakpoint_toggle);
   debugger_send(UPDATE_COORDS, cur_robot->xpos, cur_robot->ypos);
 }
 

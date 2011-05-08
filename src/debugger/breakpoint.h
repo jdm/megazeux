@@ -25,16 +25,32 @@
 __M_BEGIN_DECLS
 
 struct robot;
+struct counter;
+
+typedef void (*enumerate_func)(void *elem, void *data);
 
 struct breakpoint
 {
   struct robot *target;
   int pos;
-  struct breakpoint *next;
 };
 
+struct watchpoint
+{
+  struct counter *target;
+};
+
+void init_breakpoints(struct world *mzx_world);
 void toggle_breakpoint(struct world *mzx_world, struct robot *cur_robot, int pos);
 void clear_breakpoints(struct world *mzx_world);
+bool breakpoint_exists(struct world *mzx_world, struct robot *cur_robot, int pos);
+void foreach_breakpoint(struct world *mzx_world, struct robot *cur_robot, enumerate_func func);
+
+void init_watchpoints(struct world *mzx_world);
+void toggle_watchpoint(struct world *mzx_world, struct counter *counter);
+void clear_watchpoints(struct world *mzx_world);
+bool watchpoint_exists(struct world *mzx_world, struct counter *counter);
+void foreach_watchpoint(struct world *mzx_world, struct counter *counter, enumerate_func func);
 
 __M_END_DECLS
 

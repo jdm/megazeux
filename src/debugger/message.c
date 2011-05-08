@@ -77,6 +77,6 @@ void debugger_host_send(enum message_type type, ...)
 {
   va_list args;
   va_start(args, type);
-  _send_message(parent, type, args);
+  send_message(parent, type, args);
   va_end(args);
 }

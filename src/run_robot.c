@@ -50,6 +50,7 @@
 #ifdef CONFIG_DEBUGGER
 #include "debugger_host.h"
 #include "debugger/ui.h"
+#include "debugger/breakpoint.h"
 #endif
 
 #define parsedir(a, b, c, d) \
@@ -5897,19 +5898,14 @@ void run_robot(struct world *mzx_world, int id, int x, int y)
 #ifdef CONFIG_DEBUGGER
     if(mzx_world->debugging)
     {
-      struct breakpoint *bp;
-
       if(cur_robot == src_board->robot_list[mzx_world->debug_watch.watch_id])
         debugger_send(CURRENT_LINE, cur_robot->cur_prog_line);
 
-      for(bp = &mzx_world->debug_watch.breakpoints; bp; bp = bp->next)
+      if(breakpoint_exists(mzx_world, cur_robot, cur_robot->cur_prog_line))
       {
-        if(bp->target != cur_robot || bp->pos != cur_robot->cur_prog_line)
-          continue;
-        
         mzx_world->debug_watch.watch_id = id;
-        if(mzx_world->debugging == RUNNING
-        || mzx_world->debugging == STEPPING_OTHERS)
+        if(mzx_world->debugging == RUNNING ||
+           mzx_world->debugging == STEPPING_OTHERS)
         {
           mzx_world->debugging = STOPPED;
           watch_remote_robot(mzx_world);

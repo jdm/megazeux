@@ -2805,26 +2805,18 @@ static void display_robot_line(struct robot_state *rstate,
         //FIXME this linear search is inefficient for large programs
         int line_number = 0;
         int offset = 2; // FIXME Why is this 2?
-        struct robot_line *temp = rstate->base;
-        struct breakpoint *bp = &rstate->mzx_world->debug_watch.breakpoints;
         struct robot *watched = &rstate->mzx_world->global_robot; //FIXME this is hardcoded in too many locations
+        struct robot_line *temp = rstate->base;
         while(temp != current_rline)
         {
           offset += temp->line_bytecode_length;
           temp = temp->next;
           line_number++;
         }
-      
-        while(bp)
-        {
-          if(bp->pos == line_number)
-            break;
-          bp = bp->next;
-        }
 
-        if(bp)
+        if(breakpoint_exists(rstate->mzx_world, watched, line_number))
         {
-          //FIXME magic number 17
+          //XXXjdm magic number 17
           current_color = combine_colors(color_codes[17], bg_color);
           draw_char('\x10', current_color, 0, y);
           write_string_mask(current_rline->line_text, x,
@@ -2833,7 +2825,7 @@ static void display_robot_line(struct robot_state *rstate,
         }
         else if(watched->cur_prog_line == offset)
         {
-          //FIXME magic number 18
+          //XXXjdm magic number 18
           current_color = combine_colors(color_codes[18], bg_color);
           draw_char('\x10', current_color, 0, y);
           write_string_mask(current_rline->line_text, x,

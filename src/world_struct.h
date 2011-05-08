@@ -38,7 +38,7 @@ __M_BEGIN_DECLS
 #include "util.h"
 
 #ifdef CONFIG_DEBUGGER
-#include "debugger/breakpoint.h"
+struct list_node;
 #endif
 
 struct world
@@ -208,7 +208,8 @@ struct world
   struct
   {
     int watch_id; // -1 is no watch
-    struct breakpoint breakpoints;
+    struct list_node* breakpoints;
+    struct list_node* watchpoints;
     int commands_executed;
   } debug_watch;
 #endif
