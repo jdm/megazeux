@@ -47,14 +47,14 @@ SDL_CFLAGS  ?= $(shell sdl2-config --cflags | sed 's,-I,-isystem ,g')
 SDL_LDFLAGS ?= $(shell sdl2-config --libs)
 endif
 
-VORBIS_CFLAGS  ?= -I${PREFIX}/include -DOV_EXCLUDE_STATIC_CALLBACKS
+VORBIS_CFLAGS  ?= -DOV_EXCLUDE_STATIC_CALLBACKS -s USE_VORBIS=1
 ifneq (${TREMOR},1)
 VORBIS_LDFLAGS ?= -L${PREFIX}/lib -lvorbisfile -lvorbis -logg
 else
 VORBIS_LDFLAGS ?= -L${PREFIX}/lib -lvorbisidec
 endif
 
-MIKMOD_CFLAGS  ?= -I${PREFIX}/include
+#MIKMOD_CFLAGS  ?= -I${PREFIX}/include
 MIKMOD_LDFLAGS ?= -L${PREFIX}/lib -lmikmod
 
 ZLIB_CFLAGS  ?= -I${PREFIX}/include \

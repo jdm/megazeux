@@ -26,6 +26,7 @@
 #include "util.h"
 
 #include "SDL.h"
+#include "memory.h"
 
 static SDL_Color sdlpal[SMZX_PAL_SIZE];
 

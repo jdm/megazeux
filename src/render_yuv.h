@@ -34,6 +34,7 @@
 #include "graphics.h"
 
 #include "SDL.h"
+#include "memory.h"
 
 __M_BEGIN_DECLS
 

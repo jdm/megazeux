@@ -65,6 +65,7 @@ usage() {
 	echo "  --disable-uthash      Disables hash counter/string lookups."
 	echo "  --enable-debytecode   Enable experimental 'debytecode' transform."
 	echo "  --enable-libsdl2      Enable experimental SDL 2.0 support."
+	echo "  --enable-emscripten   Enable experimental emscripten support."
 	echo
 	echo "e.g.: ./config.sh --platform unix --prefix /usr"
 	echo "                  --sysconfdir /etc --disable-x11"
@@ -116,6 +117,7 @@ CHECK_ALLOC="true"
 UTHASH="true"
 DEBYTECODE="false"
 LIBSDL2="false"
+EMSCRIPTEN="false"
 
 #
 # User may override above settings
@@ -255,6 +257,9 @@ while [ "$1" != "" ]; do
 
 	[ "$1" = "--enable-libsdl2" ]  && LIBSDL2="true"
 	[ "$1" = "--disable-libsdl2" ] && LIBSDL2="false"
+
+	[ "$1" = "--enable-emscripten" ]  && EMSCRIPTEN="true"
+	[ "$1" = "--disable-emscripten" ] && EMSCRIPTEN="false"
 
 	if [ "$1" = "--help" ]; then
 		usage
@@ -997,6 +1002,17 @@ if [ "$LIBSDL2" = "true" ]; then
 	echo "BUILD_LIBSDL2=1" >> platform.inc
 else
 	echo "Experimental SDL 2.0 support disabled."
+fi
+
+#
+# Experimental emscripten support, if enabled
+#
+if [ "$EMSCRIPTEN" = "true" ]; then
+	echo "Experimental emscripten support enabled."
+	echo "#define CONFIG_EMSCRIPTEN" >> src/config.h
+	echo "BUILD_EMSCRIPTEN=1" >> platform.inc
+else
+	echo "Experimental emscripten support disabled."
 fi
 
 echo

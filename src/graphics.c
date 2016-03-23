@@ -857,7 +857,7 @@ static SDL_Surface *png_read_icon(const char *name)
 
 void set_window_caption(const char *caption)
 {
-#ifdef CONFIG_SDL
+#if defined(CONFIG_SDL) && !defined(CONFIG_EMSCRIPTEN)
   SDL_Window *window = SDL_GetWindowFromID(sdl_window_id);
   SDL_SetWindowTitle(window, caption);
 #endif

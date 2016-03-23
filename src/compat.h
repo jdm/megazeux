@@ -205,6 +205,7 @@ static inline void *crealloc(void *ptr, size_t size)
 #include <SDL.h>
 #include <SDL_syswm.h>
 
+#if 0
 #if !SDL_VERSION_ATLEAST(2,0,0)
 
 // This block remaps anything that is EXACTLY equivalent to its new SDL 2.0
@@ -272,6 +273,7 @@ static inline int SDL_GL_SetSwapInterval(int interval)
 {
   return SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, interval);
 }
+#endif
 #endif
 
 #ifdef CONFIG_X11
