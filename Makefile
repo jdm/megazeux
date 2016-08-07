@@ -41,7 +41,7 @@ RM      ?= rm
 
 ifeq (${BUILD_LIBSDL2},)
 SDL_CFLAGS  ?= $(shell sdl-config --cflags)
-SDL_LDFLAGS ?= $(shell sdl-config --libs) -lSDL_mixer
+SDL_LDFLAGS ?= $(shell sdl-config --libs)
 else
 SDL_CFLAGS  ?= $(shell sdl2-config --cflags | sed 's,-I,-isystem ,g')
 SDL_LDFLAGS ?= $(shell sdl2-config --libs)

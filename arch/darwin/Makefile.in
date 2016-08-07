@@ -51,7 +51,7 @@ DSOSONAME  = -install_name
 
 ifeq (${BUILD_LIBSDL2},)
 SDL_CFLAGS  ?= $(shell ${PREFIX}/bin/sdl-config --cflags)
-SDL_LDFLAGS ?= $(shell ${PREFIX}/bin/sdl-config --libs) -lSDL_mixer
+SDL_LDFLAGS ?= $(shell ${PREFIX}/bin/sdl-config --libs)
 else
 SDL_CFLAGS  ?= $(shell ${PREFIX}/bin/sdl2-config --cflags)
 SDL_LDFLAGS ?= $(shell ${PREFIX}/bin/sdl2-config --libs)

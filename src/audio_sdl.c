@@ -19,9 +19,7 @@
 
 #include "audio.h"
 #include "SDL.h"
-#include "SDL_mixer.h"
 
-#include <assert.h>
 #include <stdlib.h>
 
 static SDL_AudioSpec audio_settings;
@@ -33,26 +31,27 @@ static void sdl_audio_callback(void *userdata, Uint8 *stream, int len)
 
 void init_audio_platform(struct config_info *conf)
 {
-  int ret = Mix_OpenAudio(audio.output_frequency, AUDIO_S16SYS, 2, conf->buffer_size);
-  assert(ret == 0);
-  /*int channels;
-  ret = Mix_QuerySpec(&audio_settings.freq, &audio_settings.format, &channels);
-  audio_settings.channels = channels;
-  assert(ret != 0);*/
-  audio_settings.freq = 22050;
-  audio_settings.format = AUDIO_S16SYS;
-  audio_settings.channels = 2;
-  audio_settings.samples = 1024/*conf->buffer_size*/;
-  audio_settings.callback = sdl_audio_callback;
-  audio_settings.userdata = NULL;
-  audio_settings.silence = 0x00;
-  audio_settings.size = (audio_settings.format & 0xFF)/8;
-  audio_settings.size *= audio_settings.channels;
-  audio_settings.size *= audio_settings.samples;
+  SDL_AudioSpec desired_spec =
+  {
+    0,
+    AUDIO_S16SYS,
+    2,
+    0,
+    conf->buffer_size,
+    0,
+    0,
+    sdl_audio_callback,
+    NULL
+  };
 
-  Mix_HookMusic(sdl_audio_callback, NULL);
+  desired_spec.freq = audio.output_frequency;
+
+  SDL_OpenAudio(&desired_spec, &audio_settings);
   audio.mix_buffer = cmalloc(audio_settings.size * 2);
   audio.buffer_samples = audio_settings.samples;
+
+  // now set the audio going
+  SDL_PauseAudio(0);
 }
 
 void quit_audio_platform(void)

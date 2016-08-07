@@ -39,7 +39,6 @@
 // For WAV loader fallback
 #ifdef CONFIG_SDL
 #include "SDL.h"
-#include "SDL_mixer.h"
 #endif
 
 #ifdef CONFIG_TREMOR
