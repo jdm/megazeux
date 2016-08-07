@@ -426,7 +426,7 @@ void wait_event(void)
   update_autorepeat();
 }
 
-Uint32 update_event_status_delay(void)
+Uint32 update_event_status_delay(game_state *game)
 {
   int rval = update_event_status();
   int delay_ticks;
@@ -441,7 +441,12 @@ Uint32 update_event_status_delay(void)
   if(delay_ticks < 0)
     delay_ticks = 0;
 
-  delay(delay_ticks);
+  if (!game) {
+    delay(delay_ticks);
+  } else {
+    game->delay = delay_ticks;
+    game->delay_begin = last_update_time;
+  }
   return rval;
 }
 
