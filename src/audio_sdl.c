@@ -35,15 +35,18 @@ void init_audio_platform(struct config_info *conf)
 {
   int ret = Mix_OpenAudio(audio.output_frequency, AUDIO_S16SYS, 2, conf->buffer_size);
   assert(ret == 0);
-  int channels;
+  /*int channels;
   ret = Mix_QuerySpec(&audio_settings.freq, &audio_settings.format, &channels);
   audio_settings.channels = channels;
-  assert(ret != 0);
-  audio_settings.samples = conf->buffer_size;
+  assert(ret != 0);*/
+  audio_settings.freq = 22050;
+  audio_settings.format = AUDIO_S16SYS;
+  audio_settings.channels = 2;
+  audio_settings.samples = 1024/*conf->buffer_size*/;
   audio_settings.callback = sdl_audio_callback;
   audio_settings.userdata = NULL;
   audio_settings.silence = 0x00;
-  audio_settings.size = (AUDIO_S16SYS & 0xFF)/8;
+  audio_settings.size = (audio_settings.format & 0xFF)/8;
   audio_settings.size *= audio_settings.channels;
   audio_settings.size *= audio_settings.samples;
 
